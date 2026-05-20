@@ -232,7 +232,18 @@ GET /api/stocks/:symbol/signals?period=1d&limit=300
 9. 在前端 K 线图上展示信号标记。
 10. 增加回测、筛选和告警能力。
 
+## Codex 协作模板
+
+本仓库包含项目级 Codex 模板：
+
+- `AGENTS.md`：项目长期协作约定。
+- `.codex/config.example.toml`：Codex 配置示例。
+- `.codex/skills/kline-signal-engineer`：K 线与指标信号识别规则 skill。
+- `.codex/skills/stock-fullstack-builder`：React + Node.js 全栈开发 skill。
+- `.codex/skills/market-data-integrator`：行情数据接入与归一化 skill。
+
+这些 skill 当前作为项目模板保存。若需要让 Codex 自动发现，可将对应目录复制到 `~/.codex/skills/`。
+
 ## 风险提示
 
 技术信号只能作为行情分析辅助工具，不构成投资建议。任何自动识别出来的 K 线形态或指标信号，都应结合趋势位置、成交量、市场环境、基本面和个人风险承受能力综合判断。
-

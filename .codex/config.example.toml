@@ -1,0 +1,18 @@
+# Codex 项目配置示例
+# 使用方式：按需复制到 ~/.codex/config.toml，或把其中的项目段落合并进已有配置。
+# 这是模板文件，不会被 Codex 自动当作全局配置读取。
+
+model = "gpt-5.2"
+model_reasoning_effort = "medium"
+
+# 常用策略示例：
+# approval_policy = "on-request"
+# sandbox_mode = "workspace-write"
+
+[projects."/Users/huangyang.102/Documents/shAre-stock-god"]
+trust_level = "trusted"
+
+# 如果后续接入 MCP，可在这里追加配置。
+# [mcp_servers.example]
+# command = "npx"
+# args = ["-y", "example-mcp-server"]
