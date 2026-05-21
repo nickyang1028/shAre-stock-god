@@ -1,4 +1,0 @@
-interface:
-  display_name: "K线信号工程师"
-  short_description: "设计股票K线与指标信号规则"
-  default_prompt: "使用 $kline-signal-engineer 设计或实现股票 K 线信号识别规则。"

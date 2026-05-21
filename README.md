@@ -123,30 +123,29 @@ type Signal = {
 
 ```txt
 shAre-stock-god/
-  README.md
-  package.json
-  apps/
-    web/
-      src/
-        components/
-        pages/
-        hooks/
-        services/
-        types/
-    server/
-      src/
-        modules/
-          market-data/
-          indicators/
-          signals/
-        routes/
-        types/
-        utils/
-  packages/
-    shared/
-      src/
-        types/
-        constants/
+├── README.md                         # 项目说明文档
+├── package.json                      # 项目依赖与脚本配置
+├── apps/
+│   ├── web/                          # React 前端应用
+│   │   └── src/
+│   │       ├── components/           # 前端组件
+│   │       │   └── basic/            # 通用组件
+│   │       │   └── biz/              # 业务组件
+│   │       ├── pages/                # 页面入口
+│   │       ├── hooks/                # React Hooks
+│   │       ├── services/             # API 请求封装
+│   │       └── types/                # 前端类型定义
+│   └── server/                       # Node.js 后端服务
+│       └── src/
+│           ├── modules/              # 后端功能模块
+│           ├── routes/               # API 路由
+│           ├── types/                # 后端类型定义
+│           └── utils/                # 通用工具函数
+└── packages/
+    └── shared/                       # 前后端共享代码
+        └── src/
+            ├── types/                # 共享类型
+            └── constants/            # 共享常量
 ```
 
 ## 信号识别设计思路
@@ -217,6 +216,30 @@ GET /api/stocks/:symbol/signals?period=1d&limit=300
     }
   ]
 }
+```
+
+## 本地运行
+
+项目要求使用 Node.js 22：
+
+```bash
+nvm use 22
+npm install
+npm run dev
+```
+
+前端默认运行在 `http://localhost:5173`，后端默认运行在 `http://localhost:3001`。
+
+MVP 接口：
+
+```http
+GET /api/stocks/:symbol/analysis?limit=20
+```
+
+示例：
+
+```http
+GET /api/stocks/600519/analysis?limit=20
 ```
 
 ## 开发计划

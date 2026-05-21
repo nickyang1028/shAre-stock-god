@@ -1,4 +1,0 @@
-interface:
-  display_name: "股票全栈功能构建器"
-  short_description: "开发React和Node股票分析功能"
-  default_prompt: "使用 $stock-fullstack-builder 实现股票分析相关的前后端功能。"
