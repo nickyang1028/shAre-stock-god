@@ -10,22 +10,33 @@ import {
 } from "klinecharts";
 
 type KLineChartPanelProps = {
+  /** K 线序列 */
   klines: KLine[];
+  /** 需要叠加到图表上的信号列表 */
   signals: Signal[];
 };
 
 type ChartKLineData = {
+  /** 时间戳 */
   timestamp: number;
+  /** 开盘价 */
   open: number;
+  /** 最高价 */
   high: number;
+  /** 最低价 */
   low: number;
+  /** 收盘价 */
   close: number;
+  /** 成交量 */
   volume: number;
+  /** 成交额 */
   turnover: number;
 };
 
 type SignalLabelData = {
+  /** 图表标记文案 */
   label: string;
+  /** 信号方向，用于控制标记颜色 */
   direction: Signal["direction"];
 };
 
@@ -80,6 +91,11 @@ registerOverlay({
   },
 });
 
+/**
+ * 渲染 K 线图并在对应价格位置叠加技术信号标记。
+ * @param {KLineChartPanelProps} props 组件属性
+ * @returns {JSX.Element} K 线图容器
+ */
 export function KLineChartPanel(props: KLineChartPanelProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<Chart | null>(null);
@@ -90,6 +106,7 @@ export function KLineChartPanel(props: KLineChartPanelProps) {
       return undefined;
     }
 
+    // 副作用说明：创建图表实例并注册内置指标，卸载时销毁实例。
     const chart = init(container);
     chartRef.current = chart;
     chart?.createIndicator("MA", true, { id: "candle_pane" });
@@ -118,6 +135,7 @@ export function KLineChartPanel(props: KLineChartPanelProps) {
     }));
 
     chart.applyNewData(chartData);
+    // 关键逻辑：每次重绘前先清空旧信号，避免叠加重复标记。
     chart.removeOverlay({ groupId: "signals" });
 
     props.signals.forEach((signal) => {

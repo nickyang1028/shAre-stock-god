@@ -2,14 +2,25 @@ import type { KLine, Signal, SignalDirection, SignalType } from "@share-stock-go
 import { calculateMA, calculateMACD } from "../indicators/indicators.js";
 
 type SignalMeta = {
+  /** 信号类型 */
   type: SignalType;
+  /** 信号名称 */
   name: string;
+  /** 信号方向 */
   direction: SignalDirection;
+  /** 信号强度，1~5 */
   strength: 1 | 2 | 3 | 4 | 5;
+  /** 信号说明 */
   description: string;
 };
 
+/**
+ * 聚合识别所有支持的技术信号并按时间升序输出。
+ * @param {KLine[]} klines 已按时间升序排列的 K 线数据
+ * @returns {Signal[]} 识别出的信号列表
+ */
 export function detectSignals(klines: KLine[]): Signal[] {
+  // 聚合多种信号来源后统一排序，保证前端展示时间线稳定。
   return [
     ...detectEngulfingSignals(klines),
     ...detectMaCrossSignals(klines),
@@ -17,6 +28,11 @@ export function detectSignals(klines: KLine[]): Signal[] {
   ].sort((first, second) => first.timestamp - second.timestamp);
 }
 
+/**
+ * 识别阳包阴和阴包阳两类实体吞没形态。
+ * @param {KLine[]} klines 已按时间升序排列的 K 线数据
+ * @returns {Signal[]} 吞没形态信号列表
+ */
 function detectEngulfingSignals(klines: KLine[]): Signal[] {
   const signals: Signal[] = [];
 
@@ -27,6 +43,7 @@ function detectEngulfingSignals(klines: KLine[]): Signal[] {
       continue;
     }
 
+    // 阳包阴：当前阳线实体覆盖前一根阴线实体，提示偏多。
     if (
       previous.close < previous.open &&
       current.close > current.open &&
@@ -42,6 +59,7 @@ function detectEngulfingSignals(klines: KLine[]): Signal[] {
       }));
     }
 
+    // 阴包阳：当前阴线实体覆盖前一根阳线实体，提示偏空。
     if (
       previous.close > previous.open &&
       current.close < current.open &&
@@ -61,6 +79,11 @@ function detectEngulfingSignals(klines: KLine[]): Signal[] {
   return signals;
 }
 
+/**
+ * 识别 MA5 与 MA10 的金叉与死叉信号。
+ * @param {KLine[]} klines 已按时间升序排列的 K 线数据
+ * @returns {Signal[]} 均线交叉信号列表
+ */
 function detectMaCrossSignals(klines: KLine[]): Signal[] {
   const signals: Signal[] = [];
   const ma5 = calculateMA(klines, 5);
@@ -73,6 +96,7 @@ function detectMaCrossSignals(klines: KLine[]): Signal[] {
     const currentLong = ma10[index];
     const current = klines[index];
 
+    // 边界处理：均线前期可能为空，必须等短长均线都具备后再判断。
     if (
       current &&
       previousShort != null &&
@@ -113,6 +137,11 @@ function detectMaCrossSignals(klines: KLine[]): Signal[] {
   return signals;
 }
 
+/**
+ * 识别 MACD 指标的金叉与死叉信号。
+ * @param {KLine[]} klines 已按时间升序排列的 K 线数据
+ * @returns {Signal[]} MACD 交叉信号列表
+ */
 function detectMacdCrossSignals(klines: KLine[]): Signal[] {
   const signals: Signal[] = [];
   const macd = calculateMACD(klines);
@@ -122,6 +151,7 @@ function detectMacdCrossSignals(klines: KLine[]): Signal[] {
     const current = macd[index];
     const kline = klines[index];
 
+    // 复杂条件：在零轴上方/下方发生交叉时，使用不同强度提升可解释性。
     if (previous && current && kline && previous.dif <= previous.dea && current.dif > current.dea) {
       signals.push(createSignal(kline, {
         type: "macd_golden_cross",
@@ -146,6 +176,12 @@ function detectMacdCrossSignals(klines: KLine[]): Signal[] {
   return signals;
 }
 
+/**
+ * 组装统一结构的信号对象。
+ * @param {KLine} kline 触发信号的 K 线
+ * @param {SignalMeta} meta 信号元信息
+ * @returns {Signal} 标准化后的信号
+ */
 function createSignal(kline: KLine, meta: SignalMeta): Signal {
   return {
     id: `${kline.symbol}-${kline.timestamp}-${meta.type}`,

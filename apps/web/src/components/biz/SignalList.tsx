@@ -1,10 +1,17 @@
 import type { Signal } from "@share-stock-god/shared";
 
 type SignalListProps = {
+  /** 待展示的信号列表 */
   signals: Signal[];
 };
 
+/**
+ * 展示技术信号列表与信号摘要信息。
+ * @param {SignalListProps} props 组件属性
+ * @returns {JSX.Element} 信号列表视图
+ */
 export function SignalList(props: SignalListProps) {
+  // 边界处理：没有信号时展示空状态，避免渲染空列表。
   if (props.signals.length === 0) {
     return <div className="emptyState">近 20 个交易日暂未识别到 MVP 信号</div>;
   }

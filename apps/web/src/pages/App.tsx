@@ -6,13 +6,23 @@ import { fetchStockAnalysis } from "../services/stockAnalysisClient.js";
 
 const DEFAULT_SYMBOL = "600519";
 
+/**
+ * 应用主页面，负责股票查询、结果展示与错误提示。
+ * @returns {JSX.Element} 页面主视图
+ */
 export function App() {
   const [symbol, setSymbol] = useState(DEFAULT_SYMBOL);
   const [analysis, setAnalysis] = useState<StockAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  /**
+   * 加载指定股票的分析结果并更新页面状态。
+   * @param {string} nextSymbol 待查询的股票代码
+   * @returns {Promise<void>} 无返回值
+   */
   async function loadAnalysis(nextSymbol: string) {
+    // 副作用说明：发起网络请求并更新 loading / error / analysis 三类状态。
     setLoading(true);
     setErrorMessage("");
 
@@ -27,6 +37,11 @@ export function App() {
     }
   }
 
+  /**
+   * 处理股票查询表单提交。
+   * @param {FormEvent<HTMLFormElement>} event 表单提交事件
+   * @returns {void} 无返回值
+   */
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void loadAnalysis(symbol);
