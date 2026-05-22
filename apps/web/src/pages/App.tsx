@@ -47,10 +47,6 @@ export function App() {
     void loadAnalysis(symbol);
   }
 
-  useEffect(() => {
-    void loadAnalysis(DEFAULT_SYMBOL);
-  }, []);
-
   return (
     <main className="appShell">
       <section className="toolbar">

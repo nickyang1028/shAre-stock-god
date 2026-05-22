@@ -7,7 +7,7 @@ import type { StockAnalysisResponse } from "@share-stock-god/shared";
  */
 export async function fetchStockAnalysis(symbol: string): Promise<StockAnalysisResponse> {
   // 副作用说明：发起网络请求并在失败时抛出可展示错误。
-  const response = await fetch(`/api/stocks/${encodeURIComponent(symbol)}/analysis?limit=20`);
+  const response = await fetch(`/api/stocks/${encodeURIComponent(symbol)}/analysis?limit=30`);
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as { message?: string } | null;

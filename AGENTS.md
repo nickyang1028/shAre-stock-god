@@ -86,7 +86,6 @@ shAre-stock-god/
 
 ## 通用编码规范
 
-
 - ts以及tsx文件中的所有数据类型都要明确定义，禁止出现任何以any标注的变量类型。
 - 判断数据类型时，优先使用 `utils` 中已有的方法，例如 `isNumber`、`isString`、`isPlainObject`、`isFunction`、`isThenable`、`isPrimitive`、`isNonNullable`。
 - 仅当 `utils` 中没有合适方法，或当前场景需要更严格、更特殊的判断逻辑时，再使用内联 `typeof`、`instanceof` 等判断方式。
