@@ -1,25 +1,18 @@
-import { FormEvent, useEffect, useState } from "react";
-import type { StockAnalysisResponse } from "@share-stock-god/shared";
-import { KLineChartPanel } from "../components/biz/KLineChartPanel.js";
-import { SignalList } from "../components/biz/SignalList.js";
-import { fetchStockAnalysis } from "../services/stockAnalysisClient.js";
+import { FormEvent, useEffect, useRef, useState } from 'react';
+import type { StockAnalysisResponse } from '@share-stock-god/shared';
+import { KLineChartPanel } from '../components/biz/KLineChartPanel.js';
+import { SignalList } from '../components/biz/SignalList.js';
+import { StatusBanner } from '../components/biz/StatusBanner.js';
+import {
+  fetchStockAnalysisWithRetry,
+  createRequestState,
+  resetRequestState,
+  cancelRequest,
+  type RequestState,
+} from '../services/stockAnalysisClient.js';
+import './index.scss';
 
-const DEFAULT_SYMBOL = "600519";
-
-// 格式化涨跌幅
-function formatChangePercent(open: number, close: number): string {
-  if (open === 0) return "0.00%";
-  const change = ((close - open) / open) * 100;
-  const sign = change >= 0 ? "+" : "";
-  return `${sign}${change.toFixed(2)}%`;
-}
-
-// 获取涨跌幅颜色
-function getChangeColor(change: number): string {
-  if (change > 0) return "#ef5350";
-  if (change < 0) return "#26a69a";
-  return "#888888";
-}
+const DEFAULT_SYMBOL = '600519';
 
 /**
  * 应用主页面，负责股票查询、结果展示与错误提示。
@@ -29,7 +22,26 @@ export function App() {
   const [symbol, setSymbol] = useState(DEFAULT_SYMBOL);
   const [analysis, setAnalysis] = useState<StockAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState('');
+  const [retryInfo, setRetryInfo] = useState<{
+    current: number;
+    max: number;
+  } | null>(null);
+
+  // 使用 ref 来存储请求状态，避免重渲染问题
+  const requestStateRef = useRef<RequestState>(createRequestState());
+  // 用于存储 AbortController 以便取消请求
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 组件卸载时取消请求
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      cancelRequest(requestStateRef.current);
+    };
+  }, []);
 
   /**
    * 加载指定股票的分析结果并更新页面状态。
@@ -37,19 +49,78 @@ export function App() {
    * @returns {Promise<void>} 无返回值
    */
   async function loadAnalysis(nextSymbol: string) {
-    // 副作用说明：发起网络请求并更新 loading / error / analysis 三类状态。
+    // 如果有正在进行的请求，先取消
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    cancelRequest(requestStateRef.current);
+
+    // 重置状态
+    resetRequestState(requestStateRef.current);
+    abortControllerRef.current = new AbortController();
+
     setLoading(true);
-    setErrorMessage("");
+    setErrorMessage('');
+    setRetryInfo(null);
 
     try {
-      const result = await fetchStockAnalysis(nextSymbol);
-      setAnalysis(result);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "查询失败";
-      setErrorMessage(message);
-    } finally {
-      setLoading(false);
+      await fetchStockAnalysisWithRetry(
+        nextSymbol,
+        requestStateRef.current,
+        {
+          onStart: () => {
+            setLoading(true);
+          },
+          onSuccess: (data) => {
+            setAnalysis(data);
+            setErrorMessage('');
+          },
+          onError: (error) => {
+            // 检查是否是因为取消而报错
+            if (
+              error.message.includes('cancel') ||
+              error.message.includes('abort')
+            ) {
+              return;
+            }
+            setErrorMessage(error.message);
+            setAnalysis(null);
+          },
+          onRetry: (current, max) => {
+            setRetryInfo({ current, max });
+          },
+          onCancel: () => {
+            setLoading(false);
+            setRetryInfo(null);
+          },
+          onFinally: () => {
+            setLoading(false);
+            abortControllerRef.current = null;
+          },
+        },
+        {
+          maxRetries: 10,
+          retryDelay: 1000,
+          backoffMultiplier: 1,
+        }
+      );
+    } catch {
+      // 错误已经在 onError 回调中处理
     }
+  }
+
+  /**
+   * 取消当前正在进行的请求
+   */
+  function handleCancel() {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    cancelRequest(requestStateRef.current);
+    setLoading(false);
+    setRetryInfo(null);
   }
 
   /**
@@ -67,7 +138,9 @@ export function App() {
       <section className="toolbar">
         <div>
           <h1>A 股 K 线信号识别</h1>
-          <p>查询近 20 个交易日日 K，并标记阳包阴、阴包阳、均线交叉和 MACD 交叉。</p>
+          <p>
+            查询近 20 个交易日日 K，并标记阳包阴、阴包阳、均线交叉和 MACD 交叉。
+          </p>
         </div>
         <form className="searchForm" onSubmit={handleSubmit}>
           <input
@@ -77,14 +150,28 @@ export function App() {
             onChange={(event) => setSymbol(event.target.value)}
             placeholder="例如 600519"
             value={symbol}
+            disabled={loading}
           />
-          <button disabled={loading} type="submit">
-            {loading ? "查询中" : "查询"}
-          </button>
+          {loading ? (
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="cancelButton"
+            >
+              取消
+            </button>
+          ) : (
+            <button type="submit">查询</button>
+          )}
         </form>
       </section>
 
-      {errorMessage ? <div className="errorBanner">{errorMessage}</div> : null}
+      <StatusBanner
+        retryInfo={retryInfo}
+        errorMessage={errorMessage}
+        showLoading={loading}
+        onCancel={handleCancel}
+      />
 
       <section className="contentGrid">
         <div className="chartPanel">

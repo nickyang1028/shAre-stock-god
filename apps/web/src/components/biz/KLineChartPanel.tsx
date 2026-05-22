@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { KLine, Signal } from "@share-stock-god/shared";
 import { dispose, init, registerOverlay, type Chart, type OverlayCreateFiguresCallbackParams, type OverlayFigure, type Crosshair } from "klinecharts";
+import "./KLineChartPanel.scss";
 
 type KLineChartPanelProps = {
   klines: KLine[];
@@ -52,10 +53,11 @@ function formatChangePercent(open: number, close: number): string {
   return `${sign}${change.toFixed(2)}%`;
 }
 
-function getChangeColor(change: number): string {
-  if (change > 0) return "#ef5350";
-  if (change < 0) return "#26a69a";
-  return "#888888";
+// 获取涨跌幅颜色
+function getChangeColorClass(change: number): string {
+  if (change > 0) return 'up';
+  if (change < 0) return 'down';
+  return 'neutral';
 }
 
 // 注册信号点标记overlay - 只显示圆点
@@ -237,36 +239,25 @@ export function KLineChartPanel(props: KLineChartPanelProps) {
   }, [klines, signals, hoveredTimestamp]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div className="kline-chart-container">
       {/* 股票信息栏 - 显示在图表上方 */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        padding: '8px 16px',
-        borderRadius: '8px',
-      }}>
-        <span style={{ fontWeight: 'bold', fontSize: '16px', color: '#333' }}>
+      <div className="stock-info-bar">
+        <span className="stock-name">
           {stockName || '股票'} {stockSymbol}
         </span>
         {currentKline && (
           <>
-            <span style={{ fontSize: '14px', color: '#666' }}>
+            <span className="close-price">
               收: {currentKline.close.toFixed(2)}
             </span>
-            <span style={{
-              fontSize: '14px',
-              fontWeight: 'bold',
-              color: getChangeColor(change)
-            }}>
+            <span className={`change-percent ${getChangeColorClass(change)}`}>
               {change >= 0 ? '+' : ''}{(change * 100).toFixed(2)}%
             </span>
           </>
         )}
       </div>
 
-      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      <div ref={containerRef} className="chart-surface" />
     </div>
   );
 }

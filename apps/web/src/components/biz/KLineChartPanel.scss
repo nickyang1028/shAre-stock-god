@@ -1,0 +1,59 @@
+// K线图表组件样式
+
+.kline-chart-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+// 股票信息栏
+.stock-info-bar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 8px 16px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+// 股票名称
+.stock-name {
+  font-weight: bold;
+  font-size: 16px;
+  color: #333;
+}
+
+// 收盘价
+.close-price {
+  font-size: 14px;
+  color: #666;
+}
+
+// 涨跌幅
+.change-percent {
+  font-size: 14px;
+  font-weight: bold;
+
+  &.up {
+    color: #ef5350;
+  }
+
+  &.down {
+    color: #26a69a;
+  }
+
+  &.neutral {
+    color: #888888;
+  }
+}
+
+// 图表容器
+.chart-surface {
+  width: 100%;
+  height: 100%;
+}
