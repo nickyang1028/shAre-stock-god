@@ -6,6 +6,21 @@ import { fetchStockAnalysis } from "../services/stockAnalysisClient.js";
 
 const DEFAULT_SYMBOL = "600519";
 
+// 格式化涨跌幅
+function formatChangePercent(open: number, close: number): string {
+  if (open === 0) return "0.00%";
+  const change = ((close - open) / open) * 100;
+  const sign = change >= 0 ? "+" : "";
+  return `${sign}${change.toFixed(2)}%`;
+}
+
+// 获取涨跌幅颜色
+function getChangeColor(change: number): string {
+  if (change > 0) return "#ef5350";
+  if (change < 0) return "#26a69a";
+  return "#888888";
+}
+
 /**
  * 应用主页面，负责股票查询、结果展示与错误提示。
  * @returns {JSX.Element} 页面主视图
@@ -73,14 +88,22 @@ export function App() {
 
       <section className="contentGrid">
         <div className="chartPanel">
-          <div className="panelHeader">
-            <div>
-              <h2>{analysis ? `${analysis.name} ${analysis.symbol}` : "K 线图"}</h2>
-              <p>{analysis ? `真实 A 股日 K 数据，前复权，来源 ${analysis.source}` : "等待查询结果"}</p>
+          {analysis ? (
+            <KLineChartPanel
+              klines={analysis.klines}
+              signals={analysis.signals}
+              stockName={analysis.name}
+              stockSymbol={analysis.symbol}
+              dataSource={analysis.source}
+            />
+          ) : (
+            <div className="panelHeader">
+              <div>
+                <h2>K 线图</h2>
+                <p>等待查询结果</p>
+              </div>
             </div>
-            <span>{analysis ? `${analysis.klines.length} 日` : "--"}</span>
-          </div>
-          {analysis ? <KLineChartPanel klines={analysis.klines} signals={analysis.signals} /> : null}
+          )}
         </div>
 
         <aside className="sidePanel">
