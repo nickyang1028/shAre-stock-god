@@ -140,7 +140,7 @@ export function App() {
         <div>
           <h1>A 股 K 线信号识别</h1>
           <p>
-            查询近 20 个交易日日 K，并标记阳包阴、阴包阳、均线交叉和 MACD 交叉。
+            查询近 60 个交易日日 K，并标记相应的信号。
           </p>
         </div>
         <form className="searchForm" onSubmit={handleSubmit}>

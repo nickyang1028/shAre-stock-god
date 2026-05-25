@@ -109,7 +109,7 @@ export async function fetchStockAnalysisWithRetry(
 
     try {
       const response = await fetch(
-        `/api/stocks/${encodeURIComponent(symbol)}/analysis?limit=30`,
+        `/api/stocks/${encodeURIComponent(symbol)}/analysis?limit=60`,
         {
           signal: state.abortController?.signal ?? null,
           headers: {

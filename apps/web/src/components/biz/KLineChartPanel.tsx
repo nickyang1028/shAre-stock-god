@@ -1,7 +1,15 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import type { KLine, Signal } from "@share-stock-god/shared";
-import { dispose, init, registerOverlay, type Chart, type OverlayCreateFiguresCallbackParams, type OverlayFigure, type Crosshair } from "klinecharts";
-import "./KLineChartPanel.scss";
+import { useEffect, useRef, useState, useCallback } from 'react';
+import type { KLine, Signal } from '@share-stock-god/shared';
+import {
+  dispose,
+  init,
+  registerOverlay,
+  type Chart,
+  type OverlayCreateFiguresCallbackParams,
+  type OverlayFigure,
+  type Crosshair,
+} from 'klinecharts';
+import './KLineChartPanel.scss';
 
 type KLineChartPanelProps = {
   klines: KLine[];
@@ -27,11 +35,14 @@ type SignalGroup = {
   kline: KLine | null;
 };
 
-function groupSignalsByTimestamp(signals: Signal[], klines: KLine[]): SignalGroup[] {
-  const klineMap = new Map(klines.map(k => [k.timestamp, k]));
+function groupSignalsByTimestamp(
+  signals: Signal[],
+  klines: KLine[]
+): SignalGroup[] {
+  const klineMap = new Map(klines.map((k) => [k.timestamp, k]));
   const groups = new Map<number, Signal[]>();
 
-  signals.forEach(signal => {
+  signals.forEach((signal) => {
     const existing = groups.get(signal.timestamp) || [];
     existing.push(signal);
     groups.set(signal.timestamp, existing);
@@ -47,9 +58,9 @@ function groupSignalsByTimestamp(signals: Signal[], klines: KLine[]): SignalGrou
 }
 
 function formatChangePercent(open: number, close: number): string {
-  if (open === 0) return "0.00%";
+  if (open === 0) return '0.00%';
   const change = ((close - open) / open) * 100;
-  const sign = change >= 0 ? "+" : "";
+  const sign = change >= 0 ? '+' : '';
   return `${sign}${change.toFixed(2)}%`;
 }
 
@@ -62,23 +73,29 @@ function getChangeColorClass(change: number): string {
 
 // 注册信号点标记overlay - 只显示圆点
 registerOverlay({
-  name: "signalDot",
+  name: 'signalDot',
   totalStep: 1,
   needDefaultPointFigure: false,
   needDefaultXAxisFigure: false,
   needDefaultYAxisFigure: false,
-  createPointFigures: (params: OverlayCreateFiguresCallbackParams): OverlayFigure[] => {
+  createPointFigures: (
+    params: OverlayCreateFiguresCallbackParams
+  ): OverlayFigure[] => {
     const coordinate = params.coordinates[0];
     if (!coordinate) return [];
 
-    const data = params.overlay.extendData as { direction: Signal["direction"]; label: string };
-    const color = data.direction === "bullish" ? "#16794c" : "#a33131";
+    const data = params.overlay.extendData as {
+      direction: Signal['direction'];
+      label: string;
+    };
+    // 看多信号用红色，看空信号用绿色
+    const color = data.direction === 'bullish' ? '#fa0303' : '#16794c';
 
     return [
       {
-        type: "circle",
-        attrs: { x: coordinate.x, y: coordinate.y, r: 5 },
-        styles: { color, borderColor: "#ffffff", borderSize: 2 },
+        type: 'circle',
+        attrs: { x: coordinate.x + 0.5, y: coordinate.y, r: 3 },
+        styles: { color, borderColor: color, borderSize: 2 },
         ignoreEvent: true,
       },
     ];
@@ -87,42 +104,48 @@ registerOverlay({
 
 // 注册信号文字overlay
 registerOverlay({
-  name: "signalTooltip",
+  name: 'signalTooltip',
   totalStep: 1,
   needDefaultPointFigure: false,
   needDefaultXAxisFigure: false,
   needDefaultYAxisFigure: false,
-  createPointFigures: (params: OverlayCreateFiguresCallbackParams): OverlayFigure[] => {
+  createPointFigures: (
+    params: OverlayCreateFiguresCallbackParams
+  ): OverlayFigure[] => {
     const coordinate = params.coordinates[0];
     if (!coordinate) return [];
 
-    const data = params.overlay.extendData as { label: string; direction: Signal["direction"]; visible: boolean };
+    const data = params.overlay.extendData as {
+      label: string;
+      direction: Signal['direction'];
+      visible: boolean;
+    };
     if (!data.visible) return [];
 
     const labelWidth = data.label.length * 12 + 16;
 
     return [
       {
-        type: "rect",
+        type: 'rect',
         attrs: {
           x: coordinate.x - labelWidth / 2,
           y: coordinate.y - 30,
           width: labelWidth,
           height: 20,
         },
-        styles: { color: "rgba(0, 0, 0, 0.8)", borderRadius: 4 },
+        styles: { color: 'rgba(0, 0, 0, 0.8)', borderRadius: 4 },
         ignoreEvent: true,
       },
       {
-        type: "text",
+        type: 'text',
         attrs: {
           x: coordinate.x,
           y: coordinate.y - 20,
           text: data.label,
-          align: "center",
-          baseline: "middle",
+          align: 'center',
+          baseline: 'middle',
         },
-        styles: { color: "#ffffff", size: 12 },
+        styles: { color: '#ffffff', size: 12 },
         ignoreEvent: true,
       },
     ];
@@ -141,39 +164,74 @@ export function KLineChartPanel(props: KLineChartPanelProps) {
   const currentKline = klines[currentIndex] || klines[klines.length - 1];
 
   // 计算涨跌幅
-  const change = currentKline ? ((currentKline.close - currentKline.open) / currentKline.open) : 0;
+  const change = currentKline
+    ? (currentKline.close - currentKline.open) / currentKline.open
+    : 0;
 
   // 记录当前 crosshair 所在的时间戳
   const [hoveredTimestamp, setHoveredTimestamp] = useState<number | null>(null);
 
   // 使用 useCallback 缓存回调函数
-  const handleCrosshairMove = useCallback((crosshair: Crosshair | null) => {
-    if (crosshair && crosshair.kLineData) {
-      const timestamp = crosshair.kLineData.timestamp;
-      const index = klines.findIndex(k => k.timestamp === timestamp);
-      if (index !== -1) {
-        setCurrentIndex(index);
+  const handleCrosshairMove = useCallback(
+    (crosshair: Crosshair | null) => {
+      if (crosshair && crosshair.kLineData) {
+        const timestamp = crosshair.kLineData.timestamp;
+        const index = klines.findIndex((k) => k.timestamp === timestamp);
+        if (index !== -1) {
+          setCurrentIndex(index);
+        }
+        setHoveredTimestamp(timestamp);
+      } else {
+        setHoveredTimestamp(null);
       }
-      setHoveredTimestamp(timestamp);
-    } else {
-      setHoveredTimestamp(null);
-    }
-  }, [klines]);
+    },
+    [klines]
+  );
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return undefined;
 
-    const chart = init(container, { locale: 'zh-CN' });
+    const chart = init(container, {
+      locale: 'zh-CN',
+      styles: {
+        candle: {
+          bar: {
+            upColor: '#fa0303',
+            downColor: '#16794c',
+            upBorderColor: '#fa0303',
+            downBorderColor: '#16794c',
+            upWickColor: '#fa0303',
+            downWickColor: '#16794c',
+          },
+        },
+      },
+    });
     chartRef.current = chart;
-    chart?.createIndicator("MA", true, { id: "candle_pane" });
-    chart?.createIndicator("MACD", false, { height: 120 });
+
+    // 创建K线主图（包含MA指标），并设置固定高度
+    chart?.createIndicator('MA', true, { id: 'candle_pane' });
+
+    // 设置K线主图pane的高度为500px
+    chart?.setPaneOptions({ id: 'candle_pane', height: 500 });
+
+    chart?.createIndicator('MACD', false, { height: 100 });
+    chart?.createIndicator('RSI', false, { height: 100 });
+
+    // 设置K线居中显示 - 数据较少时显示在容器中间
+    // 使用setTimeout确保图表初始化完成后再设置偏移
+    setTimeout(() => {
+      chart?.setOffsetRightDistance(50);
+    }, 0);
 
     // 订阅 crosshair 移动事件
     // 使用类型断言绕过类型检查，因为 klinecharts 的 ActionType 可能没有包含所有事件类型
-    (chart as any).subscribeAction('onCrosshairChange', (crosshair: Crosshair) => {
-      handleCrosshairMove(crosshair);
-    });
+    (chart as any).subscribeAction(
+      'onCrosshairChange',
+      (crosshair: Crosshair) => {
+        handleCrosshairMove(crosshair);
+      }
+    );
 
     return () => {
       dispose(container);
@@ -196,8 +254,8 @@ export function KLineChartPanel(props: KLineChartPanelProps) {
     }));
 
     chart.applyNewData(chartData);
-    chart.removeOverlay({ groupId: "signals" });
-    chart.removeOverlay({ groupId: "signalTooltips" });
+    chart.removeOverlay({ groupId: 'signals' });
+    chart.removeOverlay({ groupId: 'signalTooltips' });
 
     const signalGroups = groupSignalsByTimestamp(signals, klines);
 
@@ -210,8 +268,8 @@ export function KLineChartPanel(props: KLineChartPanelProps) {
 
         // 显示圆点标记
         chart.createOverlay({
-          name: "signalDot",
-          groupId: "signals",
+          name: 'signalDot',
+          groupId: 'signals',
           lock: true,
           points: [{ timestamp: signal.timestamp, value: dotPrice }],
           extendData: {
@@ -223,8 +281,8 @@ export function KLineChartPanel(props: KLineChartPanelProps) {
         // 只有在悬浮时才显示文字tooltip
         if (isHovered) {
           chart.createOverlay({
-            name: "signalTooltip",
-            groupId: "signalTooltips",
+            name: 'signalTooltip',
+            groupId: 'signalTooltips',
             lock: true,
             points: [{ timestamp: signal.timestamp, value: dotPrice }],
             extendData: {
@@ -251,7 +309,8 @@ export function KLineChartPanel(props: KLineChartPanelProps) {
               收: {currentKline.close.toFixed(2)}
             </span>
             <span className={`change-percent ${getChangeColorClass(change)}`}>
-              {change >= 0 ? '+' : ''}{(change * 100).toFixed(2)}%
+              {change >= 0 ? '+' : ''}
+              {(change * 100).toFixed(2)}%
             </span>
           </>
         )}

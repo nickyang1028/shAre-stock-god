@@ -13,7 +13,7 @@ type SignalListProps = {
 export function SignalList(props: SignalListProps) {
   // 边界处理：没有信号时展示空状态，避免渲染空列表。
   if (props.signals.length === 0) {
-    return <div className="emptyState">近 20 个交易日暂未识别到 MVP 信号</div>;
+    return <div className="emptyState">近 60 个交易日暂未识别到信号</div>;
   }
 
   return (
