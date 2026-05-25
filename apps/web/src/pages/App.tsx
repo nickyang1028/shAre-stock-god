@@ -101,7 +101,7 @@ export function App() {
           },
         },
         {
-          maxRetries: 10,
+          maxRetries: 3,
           retryDelay: 1000,
           backoffMultiplier: 1,
         }

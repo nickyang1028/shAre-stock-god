@@ -212,8 +212,11 @@ export function KLineChartPanel(props: KLineChartPanelProps) {
     // 创建K线主图（包含MA指标），并设置固定高度
     chart?.createIndicator('MA', true, { id: 'candle_pane' });
 
-    // 设置K线主图pane的高度为500px
-    chart?.setPaneOptions({ id: 'candle_pane', height: 500 });
+    // 设置K线主图pane的高度为400px
+    chart?.setPaneOptions({ id: 'candle_pane', height: 400 });
+
+    // 创建成交量指标（VOL），与K线主图堆叠显示
+    chart?.createIndicator('VOL', true, { height: 100 });
 
     chart?.createIndicator('MACD', false, { height: 100 });
     chart?.createIndicator('RSI', false, { height: 100 });

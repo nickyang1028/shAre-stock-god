@@ -89,12 +89,24 @@ input {
   max-width: 1440px;
 }
 
-.chartPanel,
+.chartPanel {
+  background: #ffffff;
+  border: 1px solid #dde5df;
+  border-radius: 8px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .sidePanel {
   background: #ffffff;
   border: 1px solid #dde5df;
   border-radius: 8px;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .panelHeader {
@@ -114,11 +126,6 @@ input {
   font-weight: 600;
 }
 
-.chartSurface {
-  height: 620px;
-  width: 100%;
-}
-
 .signalList {
   display: flex;
   flex-direction: column;
@@ -131,7 +138,7 @@ input {
 .signalItem {
   border: 1px solid #e1e8e3;
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
 }
 
 .signalHeader,
@@ -139,6 +146,10 @@ input {
   align-items: center;
   display: flex;
   justify-content: space-between;
+}
+
+.signalDesc {
+  font-size: 14px;
 }
 
 .signalBadge {
@@ -166,7 +177,7 @@ input {
 
 .signalItem p {
   line-height: 1.55;
-  margin: 10px 0;
+  margin: 8px 0;
 }
 
 .emptyState {

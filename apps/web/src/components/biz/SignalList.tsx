@@ -1,4 +1,4 @@
-import type { Signal } from "@share-stock-god/shared";
+import type { Signal } from '@share-stock-god/shared';
 
 type SignalListProps = {
   /** 待展示的信号列表 */
@@ -21,10 +21,12 @@ export function SignalList(props: SignalListProps) {
       {props.signals.map((signal) => (
         <article className="signalItem" key={signal.id}>
           <div className="signalHeader">
-            <span className={`signalBadge ${signal.direction}`}>{signal.name}</span>
+            <span className={`signalBadge ${signal.direction}`}>
+              {signal.name}
+            </span>
             <span className="signalDate">{signal.date}</span>
           </div>
-          <p>{signal.description}</p>
+          <p className="signalDesc">{signal.description}</p>
           <div className="signalMeta">
             <span>收盘价 {signal.price.toFixed(2)}</span>
             <span>强度 {signal.strength}/5</span>
