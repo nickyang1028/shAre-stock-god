@@ -1,5 +1,9 @@
 import type { KLine, Signal, SignalDirection, SignalType } from "@share-stock-god/shared";
 import { calculateMA, calculateMACD } from "../indicators/indicators.js";
+import {
+  detectHammerSignals,
+  detectDojiSignals,
+} from "./advancedPatterns.js";
 
 type SignalMeta = {
   /** 信号类型 */
@@ -25,6 +29,8 @@ export function detectSignals(klines: KLine[]): Signal[] {
     ...detectEngulfingSignals(klines),
     ...detectMaCrossSignals(klines),
     ...detectMacdCrossSignals(klines),
+    ...detectHammerSignals(klines),
+    ...detectDojiSignals(klines),
   ].sort((first, second) => first.timestamp - second.timestamp);
 }
 

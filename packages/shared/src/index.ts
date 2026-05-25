@@ -3,12 +3,32 @@ export type ASharePeriod = "1d";
 export type SignalDirection = "bullish" | "bearish" | "neutral";
 
 export type SignalType =
-  | "bullish_engulfing"
-  | "bearish_engulfing"
-  | "ma_golden_cross"
-  | "ma_dead_cross"
-  | "macd_golden_cross"
-  | "macd_dead_cross";
+  // K线形态
+  | "bullish_engulfing"           // 阳包阴
+  | "bearish_engulfing"           // 阴包阳
+  | "hammer"                       // 锤子线
+  | "inverted_hammer"            // 倒锤子线
+  | "doji"                         // 十字星
+  | "morning_star"                // 早晨之星
+  | "evening_star"                // 黄昏之星
+  | "shooting_star"               // 流星线
+  | "hanging_man"                 // 吊颈线
+  // 均线信号
+  | "ma_golden_cross"             // 均线金叉
+  | "ma_dead_cross"               // 均线死叉
+  // MACD信号
+  | "macd_golden_cross"           // MACD金叉
+  | "macd_dead_cross"             // MACD死叉
+  // 背离信号
+  | "macd_bullish_divergence"     // MACD底背离
+  | "macd_bearish_divergence"     // MACD顶背离
+  | "rsi_bullish_divergence"      // RSI底背离
+  | "rsi_bearish_divergence"      // RSI顶背离
+  // 支撑阻力信号
+  | "support_bounce"              // 支撑反弹
+  | "resistance_rejection"        // 阻力回落
+  | "support_break"               // 跌破支撑
+  | "resistance_break";           // 突破阻力
 
 export type KLine = {
   /** 股票代码，例如 600519.SH */

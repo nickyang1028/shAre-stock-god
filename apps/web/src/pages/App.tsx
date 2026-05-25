@@ -75,6 +75,7 @@ export function App() {
           onSuccess: (data) => {
             setAnalysis(data);
             setErrorMessage('');
+            setRetryInfo(null);
           },
           onError: (error) => {
             // 检查是否是因为取消而报错
