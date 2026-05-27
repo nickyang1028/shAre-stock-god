@@ -1,34 +1,63 @@
-// 状态横幅组件样式
+// 状态横幅组件样式 - 深色主题玻璃态设计
 
 .status-banner {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 0 auto 16px;
-  max-width: 1440px;
-  padding: 12px 16px;
-  border-radius: 8px;
+  margin: 0 auto 20px;
+  max-width: 1600px;
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
   font-size: 14px;
+  font-weight: 500;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid transparent;
 
-  // 重试状态样式
+  // 重试状态样式 - 琥珀色玻璃态
   &.retrying {
-    background: #fff8e1;
-    border: 1px solid #ffcc80;
-    color: #e65100;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #fcd34d;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);
+
+    .loading-icon {
+      border-color: rgba(245, 158, 11, 0.3);
+      border-top-color: #f59e0b;
+    }
   }
 
-  // 错误状态样式
+  // 错误状态样式 - 红色玻璃态
   &.error {
-    background: #fff1f0;
-    border: 1px solid #ffccc7;
-    color: #9b1c1c;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+
+    .loading-icon {
+      border-color: rgba(239, 68, 68, 0.3);
+      border-top-color: #ef4444;
+    }
+  }
+
+  // 信息状态样式 - 绿色玻璃态
+  &.info {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #6ee7b7;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+
+    .loading-icon {
+      border-color: rgba(16, 185, 129, 0.3);
+      border-top-color: #10b981;
+    }
   }
 }
 
 // Loading 旋转图标
 .loading-icon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border: 2px solid currentColor;
   border-right-color: transparent;
   border-radius: 50%;
@@ -48,41 +77,67 @@
 // 状态文本
 .status-text {
   font-weight: 500;
+  flex: 1;
 }
 
-// 取消按钮
+// 取消按钮 - 深色主题玻璃态
 .cancel-button {
-  padding: 4px 12px;
+  padding: 6px 16px;
   font-size: 13px;
-  font-weight: 500;
-  color: #d32f2f;
-  background: rgba(211, 47, 47, 0.1);
-  border: 1px solid rgba(211, 47, 47, 0.3);
-  border-radius: 4px;
+  font-weight: 600;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   flex-shrink: 0;
+  letter-spacing: 0.01em;
 
   &:hover {
-    background: rgba(211, 47, 47, 0.2);
-    border-color: rgba(211, 47, 47, 0.5);
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.5);
+    transform: translateY(-1px);
   }
 
   &:active {
-    transform: translateY(1px);
+    transform: translateY(0);
   }
 }
 
 // 响应式适配
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .status-banner {
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
     font-size: 13px;
+    padding: 12px 16px;
+  }
+
+  .loading-icon {
+    width: 16px;
+    height: 16px;
   }
 
   .cancel-button {
     width: 100%;
     margin-top: 4px;
+    padding: 8px 16px;
   }
+}
+
+// 动画关键帧 - 用于状态切换
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.status-banner {
+  animation: slideIn 0.3s ease-out;
 }

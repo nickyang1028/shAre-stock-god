@@ -11,7 +11,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@share-stock-god/shared": "0.1.0",
+    "@share-stock-god/shared": "workspace:*",
     "cors": "^2.8.5",
     "express": "^4.21.2"
   },

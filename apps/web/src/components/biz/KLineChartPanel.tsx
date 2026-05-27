@@ -163,9 +163,10 @@ export function KLineChartPanel(props: KLineChartPanelProps) {
   // 当前显示的K线数据
   const currentKline = klines[currentIndex] || klines[klines.length - 1];
 
-  // 计算涨跌幅
-  const change = currentKline
-    ? (currentKline.close - currentKline.open) / currentKline.open
+  // 计算涨跌幅 - 基于昨日收盘价（同花顺/通达信等软件的计算方式）
+  const prevKline = currentIndex > 0 ? klines[currentIndex - 1] : null;
+  const change = currentKline && prevKline
+    ? (currentKline.close - prevKline.close) / prevKline.close
     : 0;
 
   // 记录当前 crosshair 所在的时间戳
@@ -205,21 +206,93 @@ export function KLineChartPanel(props: KLineChartPanelProps) {
             downWickColor: '#16794c',
           },
         },
+        indicator: {
+          ohlc: {
+            upColor: '#fa0303',
+            downColor: '#16794c',
+          },
+          bars: [
+            { upColor: '#fa0303', downColor: '#16794c' },
+            { upColor: '#fa0303', downColor: '#16794c' },
+            { upColor: '#fa0303', downColor: '#16794c' },
+          ],
+          lines: [
+            { color: '#f59e0b', size: 1.5 }, // MA5 - 琥珀色
+            { color: '#3b82f6', size: 1.5 }, // MA10 - 蓝色
+            { color: '#8b5cf6', size: 1.5 }, // MA20 - 紫色
+            { color: '#ec4899', size: 1.5 }, // MA30 - 粉色
+            { color: '#14b8a6', size: 1.5 }, // MA60 - 青色
+            { color: '#f97316', size: 1.5 }, // MA120 - 橙色
+            { color: '#84cc16', size: 1.5 }, // MA250 -  lime绿
+          ],
+        },
+        grid: {
+          horizontal: {
+            color: 'rgba(148, 163, 184, 0.15)',
+          },
+          vertical: {
+            color: 'rgba(148, 163, 184, 0.1)',
+          },
+        },
+        xAxis: {
+          axisLine: {
+            color: 'rgba(148, 163, 184, 0.3)',
+          },
+          tickLine: {
+            color: 'rgba(148, 163, 184, 0.3)',
+          },
+          tickText: {
+            color: '#94a3b8',
+            size: 11,
+          },
+        },
+        yAxis: {
+          axisLine: {
+            color: 'rgba(148, 163, 184, 0.3)',
+          },
+          tickLine: {
+            color: 'rgba(148, 163, 184, 0.3)',
+          },
+          tickText: {
+            color: '#94a3b8',
+            size: 11,
+          },
+        },
+        crosshair: {
+          horizontal: {
+            line: {
+              color: 'rgba(16, 185, 129, 0.5)',
+              size: 1,
+            },
+            text: {
+              color: '#f1f5f9',
+              backgroundColor: 'rgba(16, 185, 129, 0.9)',
+              size: 11,
+            },
+          },
+          vertical: {
+            line: {
+              color: 'rgba(16, 185, 129, 0.5)',
+              size: 1,
+            },
+            text: {
+              color: '#f1f5f9',
+              backgroundColor: 'rgba(16, 185, 129, 0.9)',
+              size: 11,
+            },
+          },
+        },
       },
     });
     chartRef.current = chart;
 
-    // 创建K线主图（包含MA指标），并设置固定高度
+    // // 创建K线主图（包含MA指标），并设置固定高度
     chart?.createIndicator('MA', true, { id: 'candle_pane' });
-
-    // 设置K线主图pane的高度为400px
-    chart?.setPaneOptions({ id: 'candle_pane', height: 400 });
-
     // 创建成交量指标（VOL），与K线主图堆叠显示
-    chart?.createIndicator('VOL', true, { height: 100 });
+    chart?.createIndicator('VOL', true, { height: 80 });
 
-    chart?.createIndicator('MACD', false, { height: 100 });
-    chart?.createIndicator('RSI', false, { height: 100 });
+    chart?.createIndicator('MACD', false, { height: 80 });
+    chart?.createIndicator('RSI', false, { height: 80 });
 
     // 设置K线居中显示 - 数据较少时显示在容器中间
     // 使用setTimeout确保图表初始化完成后再设置偏移

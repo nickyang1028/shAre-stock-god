@@ -10,11 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@share-stock-god/shared": "0.1.0",
+    "@share-stock-god/shared": "workspace:*",
     "@vitejs/plugin-react": "^4.3.4",
     "klinecharts": "^9.8.12",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.15.1"
   },
   "devDependencies": {
     "@types/react": "^19.0.8",

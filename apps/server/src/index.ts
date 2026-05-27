@@ -1,6 +1,7 @@
 import cors from "cors";
 import express, { type Request, type Response } from "express";
 import { getStockAnalysis } from "./modules/analysis/getStockAnalysis.js";
+import { handleQuantAnalysis, handleBatchQuantAnalysis } from "./modules/quant/quantRoutes.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
@@ -52,4 +53,9 @@ function startServer(): void {
 
 app.get("/api/health", handleHealth);
 app.get("/api/stocks/:symbol/analysis", handleStockAnalysis);
+
+// 量化分析路由
+app.get("/api/quant/:symbol/analysis", handleQuantAnalysis);
+app.post("/api/quant/batch", handleBatchQuantAnalysis);
+
 startServer();

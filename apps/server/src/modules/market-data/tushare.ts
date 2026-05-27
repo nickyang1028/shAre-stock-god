@@ -1,7 +1,9 @@
 import type { KLine } from '@share-stock-god/shared';
 
 // Tushare API Token（从环境变量读取）
-const TUSHARE_TOKEN = process.env.TUSHARE_TOKEN ?? 'fc7ba32990fdfcd10b72cef7bdf686b2f65c109872cc60b2079521c8';
+const TUSHARE_TOKEN =
+  process.env.TUSHARE_TOKEN ??
+  'fc7ba32990fdfcd10b72cef7bdf686b2f65c109872cc60b2079521c8';
 const TUSHARE_API_URL = 'https://api.tushare.pro';
 
 // 缓存上次使用的token是否有效，避免反复请求无效token
@@ -34,6 +36,54 @@ function toTushareCode(symbol: string): string {
     return `${code}.SH`;
   }
   return `${code}.SZ`;
+}
+
+/**
+ * 从 Tushare 获取股票基本信息（名称等）
+ * @param {string} tsCode Tushare 格式的股票代码
+ * @returns {Promise<string>} 股票名称
+ */
+async function fetchStockName(tsCode: string): Promise<string> {
+  try {
+    const response = await fetch(TUSHARE_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        api_name: 'stock_basic',
+        token: TUSHARE_TOKEN,
+        params: {
+          ts_code: tsCode,
+        },
+        fields: 'ts_code,name',
+      }),
+    });
+
+    if (!response.ok) {
+      return tsCode;
+    }
+
+    const data = (await response.json()) as {
+      code?: number;
+      data?: {
+        fields: string[];
+        items: (string | number | null)[][];
+      };
+    };
+
+    if (data.code === 0 && data.data?.items && data.data.items.length > 0) {
+      const fields = data.data.fields;
+      const items = data.data.items[0];
+      const nameIndex = fields.indexOf('name');
+      if (nameIndex !== -1 && items && items[nameIndex]) {
+        return String(items[nameIndex]);
+      }
+    }
+  } catch {
+    // 获取名称失败时返回代码
+  }
+  return tsCode;
 }
 
 /**
@@ -74,8 +124,7 @@ export async function fetchDailyKLines(params: {
         start_date: startDateStr,
         end_date: endDateStr,
       },
-      fields:
-        'ts_code,trade_date,open,high,low,close,vol,amount',
+      fields: 'ts_code,trade_date,open,high,low,close,vol,amount',
     }),
   });
 
@@ -133,9 +182,12 @@ export async function fetchDailyKLines(params: {
   // 截取最后 limit 条
   const recentKlines = klines.slice(-params.limit);
 
+  // 获取股票真实名称
+  const stockName = await fetchStockName(tsCode);
+  console.log(stockName);
   return {
     symbol: tsCode,
-    name: tsCode, // Tushare daily 接口不返回名称，需要用其他接口查
+    name: stockName,
     klines: recentKlines,
   };
 }
