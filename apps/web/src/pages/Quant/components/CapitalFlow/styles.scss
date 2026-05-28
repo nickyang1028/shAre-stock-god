@@ -1,0 +1,107 @@
+.capital-flow {
+  .capital-flow-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+
+    .flow-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--bg-secondary, #111827);
+      border: 1px solid var(--border-subtle, rgba(148, 163, 184, 0.1));
+      border-radius: 8px;
+
+      .flow-label {
+        font-size: 13px;
+        color: var(--text-secondary, #94a3b8);
+        font-weight: 500;
+      }
+
+      .flow-value {
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      &.inflow .flow-value {
+        color: var(--bullish, #ef4444);
+      }
+
+      &.outflow .flow-value {
+        color: var(--bearish, #10b981);
+      }
+
+      &.net {
+        border-width: 2px;
+
+        &.positive {
+          border-color: rgba(239, 68, 68, 0.3);
+          background: rgba(239, 68, 68, 0.08);
+        }
+
+        &.negative {
+          border-color: rgba(16, 185, 129, 0.3);
+          background: rgba(16, 185, 129, 0.08);
+        }
+      }
+    }
+  }
+
+  .inflow-ratio {
+    margin-bottom: 16px;
+
+    .ratio-bar {
+      height: 8px;
+      background: var(--bg-tertiary, #1a2234);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+
+      .ratio-fill {
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          var(--accent-primary, #10b981),
+          var(--accent-tertiary, #34d399)
+        );
+        border-radius: 4px;
+        transition: width 0.3s ease;
+      }
+    }
+
+    .ratio-text {
+      display: block;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-secondary, #94a3b8);
+      font-weight: 500;
+    }
+  }
+
+  .signal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+
+    &.inflow {
+      color: var(--bullish, #ef4444);
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    &.outflow {
+      color: var(--bearish, #10b981);
+      background: rgba(16, 185, 129, 0.15);
+    }
+
+    &.neutral {
+      color: var(--text-tertiary, #64748b);
+      background: rgba(148, 163, 184, 0.15);
+    }
+  }
+}

@@ -12,10 +12,10 @@
   ],
   "scripts": {
     "dev": "npm-run-all --parallel dev:server dev:web",
-    "dev:web": "npm run dev -w @share-stock-god/web",
-    "dev:server": "npm run dev -w @share-stock-god/server",
-    "build": "npm run build -w @share-stock-god/shared && npm run build -w @share-stock-god/server && npm run build -w @share-stock-god/web",
-    "typecheck": "npm run typecheck -w @share-stock-god/shared && npm run typecheck -w @share-stock-god/server && npm run typecheck -w @share-stock-god/web"
+    "dev:web": "pnpm --filter @share-stock-god/web dev",
+    "dev:server": "pnpm --filter @share-stock-god/server dev",
+    "build": "pnpm --filter @share-stock-god/shared build && pnpm --filter @share-stock-god/server build && pnpm --filter @share-stock-god/web build",
+    "typecheck": "pnpm --filter @share-stock-god/shared typecheck && pnpm --filter @share-stock-god/server typecheck && pnpm --filter @share-stock-god/web typecheck"
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5",

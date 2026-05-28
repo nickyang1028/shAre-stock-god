@@ -121,6 +121,7 @@ type Signal = {
 
 ## 推荐目录结构
 
+
 ```txt
 shAre-stock-god/
 ├── README.md                         # 项目说明文档
@@ -261,11 +262,7 @@ GET /api/stocks/600519/analysis?limit=20
 
 - `AGENTS.md`：项目长期协作约定。
 - `.codex/config.example.toml`：Codex 配置示例。
-- `.codex/skills/kline-signal-engineer`：K 线与指标信号识别规则 skill。
-- `.codex/skills/stock-fullstack-builder`：React + Node.js 全栈开发 skill。
-- `.codex/skills/market-data-integrator`：行情数据接入与归一化 skill。
-
-这些 skill 当前作为项目模板保存。若需要让 Codex 自动发现，可将对应目录复制到 `~/.codex/skills/`。
+- `.codex/skills：Codex skills
 
 ## 风险提示
 

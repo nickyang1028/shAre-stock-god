@@ -1,0 +1,60 @@
+.volume-analysis {
+  .volume-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--bg-secondary, #111827);
+      border: 1px solid var(--border-subtle, rgba(148, 163, 184, 0.1));
+      border-radius: 8px;
+
+      .stat-label {
+        font-size: 13px;
+        color: var(--text-secondary, #94a3b8);
+        font-weight: 500;
+      }
+
+      .stat-value {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-primary, #f1f5f9);
+
+        &.highlight {
+          color: var(--accent-tertiary, #34d399);
+        }
+      }
+    }
+  }
+
+  .trend-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+
+    &.trend-up {
+      color: var(--bullish, #ef4444);
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    &.trend-down {
+      color: var(--bearish, #10b981);
+      background: rgba(16, 185, 129, 0.15);
+    }
+
+    &.trend-stable,
+    &.trend-neutral {
+      color: var(--text-secondary, #94a3b8);
+      background: rgba(148, 163, 184, 0.15);
+    }
+  }
+}

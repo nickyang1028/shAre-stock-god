@@ -48,20 +48,53 @@ export type StockFactors = {
   timestamp: number;
 };
 
+type MovingAverageResult = {
+  /** 均线数值，样本不足时为 null */
+  value: number | null;
+  /** 当前均线是否有足够样本支撑 */
+  ready: boolean;
+};
+
 /**
  * 计算移动平均线
+ * @param {number[]} data 指标输入序列
+ * @param {number} period 计算周期
+ * @returns {MovingAverageResult} 均线计算结果
  */
-function calculateMA(data: number[], period: number): number {
-  if (data.length < period) return 0;
+function calculateMA(data: number[], period: number): MovingAverageResult {
+  if (data.length < period) {
+    return { value: null, ready: false };
+  }
+
   const sum = data.slice(-period).reduce((a, b) => a + b, 0);
-  return sum / period;
+  return { value: sum / period, ready: true };
+}
+
+/**
+ * 读取移动平均线数值，样本不足时回退为 0 以兼容前端展示。
+ * @param {MovingAverageResult} ma 均线计算结果
+ * @returns {number} 可展示的均线数值
+ */
+function getMAValue(ma: MovingAverageResult): number {
+  return ma.value ?? 0;
 }
 
 /**
  * 计算趋势方向
+ * @param {MovingAverageResult} shortMA 短周期均线
+ * @param {MovingAverageResult} longMA 长周期均线
+ * @returns {'up' | 'down' | 'sideway'} 趋势方向
  */
-function calculateTrend(shortMA: number, longMA: number): 'up' | 'down' | 'sideway' {
-  const diff = (shortMA - longMA) / longMA;
+function calculateTrend(
+  shortMA: MovingAverageResult,
+  longMA: MovingAverageResult
+): 'up' | 'down' | 'sideway' {
+  if (!shortMA.ready || !longMA.ready || longMA.value === null || longMA.value === 0) {
+    return 'sideway';
+  }
+
+  const shortValue = shortMA.value ?? 0;
+  const diff = (shortValue - longMA.value) / longMA.value;
   if (diff > 0.02) return 'up';
   if (diff < -0.02) return 'down';
   return 'sideway';
@@ -70,6 +103,9 @@ function calculateTrend(shortMA: number, longMA: number): 'up' | 'down' | 'sidew
 /**
  * 估算主力资金流向（简化算法）
  * 基于价格位置和大单占比估算
+ * @param {KLine[]} klines K 线数据
+ * @param {number} periods 计算周期
+ * @returns {StockFactors['capitalFlow']} 资金流向估算结果
  */
 function estimateCapitalFlow(
   klines: KLine[],
@@ -82,8 +118,13 @@ function estimateCapitalFlow(
 
   recentKlines.forEach((kline) => {
     // 简化估算：收盘价在当日区间位置 + 成交量判断
-    const pricePosition = (kline.close - kline.low) / (kline.high - kline.low);
-    const volumeWeight = kline.volume / 10000; // 简化权重
+    const priceRange = kline.high - kline.low;
+    if (priceRange <= 0) {
+      return;
+    }
+
+    const pricePosition = (kline.close - kline.low) / priceRange;
+    const volumeWeight = kline.amount / 10000; // 以万元为单位估算资金规模
 
     // 收盘在高位且放量，估算为流入
     if (pricePosition > 0.6 && kline.close > kline.open) {
@@ -126,19 +167,24 @@ export function calculateFactors(
 
   const closes = klines.map((k) => k.close);
   const volumes = klines.map((k) => k.volume);
-  const latestKline = klines[klines.length - 1];
-  const prevKline = klines[klines.length - 2] || latestKline;
+  const latestKline = klines[klines.length - 1] as KLine;
+  const prevKline = klines[klines.length - 2] ?? latestKline;
 
   // 计算MA
   const ma5 = calculateMA(closes, 5);
   const ma10 = calculateMA(closes, 10);
   const ma20 = calculateMA(closes, 20);
   const ma60 = calculateMA(closes, 60);
+  const prevMA5 = calculateMA(closes.slice(0, -1), 5);
+  const prevMA10 = calculateMA(closes.slice(0, -1), 10);
 
   // 计算成交量
   const latestVolume = latestKline.volume;
   const avgVolume5 = calculateMA(volumes, 5);
-  const volumeRatio = avgVolume5 > 0 ? latestVolume / avgVolume5 : 1;
+  const volumeRatio =
+    avgVolume5.ready && avgVolume5.value !== null && avgVolume5.value > 0
+      ? latestVolume / avgVolume5.value
+      : 1;
 
   // 计算涨跌幅
   const change = latestKline.close - prevKline.close;
@@ -148,9 +194,24 @@ export function calculateFactors(
   const capitalFlow = estimateCapitalFlow(klines, 5);
 
   // 计算信号
-  const maGoldenCross = ma5 > ma10 && calculateMA(closes.slice(0, -1), 5) <= calculateMA(closes.slice(0, -1), 10);
-  const maDeadCross = ma5 < ma10 && calculateMA(closes.slice(0, -1), 5) >= calculateMA(closes.slice(0, -1), 10);
-  const volumeBreakout = volumeRatio > 2.0;
+  const ma5Value = ma5.value;
+  const ma10Value = ma10.value;
+  const prevMA5Value = prevMA5.value;
+  const prevMA10Value = prevMA10.value;
+  const canCompareMA =
+    ma5.ready &&
+    ma10.ready &&
+    prevMA5.ready &&
+    prevMA10.ready &&
+    ma5Value !== null &&
+    ma10Value !== null &&
+    prevMA5Value !== null &&
+    prevMA10Value !== null;
+  const maGoldenCross =
+    canCompareMA && ma5Value > ma10Value && prevMA5Value <= prevMA10Value;
+  const maDeadCross =
+    canCompareMA && ma5Value < ma10Value && prevMA5Value >= prevMA10Value;
+  const volumeBreakout = avgVolume5.ready && volumeRatio > 2.0;
   const capitalInflowSignal = capitalFlow.signal === 'inflow' && capitalFlow.inflowRatio > 60;
 
   return {
@@ -160,15 +221,15 @@ export function calculateFactors(
     change,
     changePercent,
     ma: {
-      ma5,
-      ma10,
-      ma20,
-      ma60,
+      ma5: getMAValue(ma5),
+      ma10: getMAValue(ma10),
+      ma20: getMAValue(ma20),
+      ma60: getMAValue(ma60),
       trend: calculateTrend(ma5, ma20),
     },
     volume: {
       latestVolume,
-      avgVolume5,
+      avgVolume5: getMAValue(avgVolume5),
       volumeRatio,
       trend: volumeRatio > 1.5 ? 'up' : volumeRatio < 0.7 ? 'down' : 'stable',
     },

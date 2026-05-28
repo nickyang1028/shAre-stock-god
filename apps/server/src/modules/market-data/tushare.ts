@@ -10,6 +10,15 @@ const TUSHARE_API_URL = 'https://api.tushare.pro';
 let lastTokenValid: boolean | null = null;
 
 /**
+ * 将 Tushare 股票代码转换为项目统一的 A 股代码格式。
+ * @param {string} tsCode Tushare 股票代码
+ * @returns {string} 项目统一股票代码
+ */
+function fromTushareCode(tsCode: string): string {
+  return tsCode.trim().toUpperCase();
+}
+
+/**
  * 检查 Tushare token 是否配置且有效
  * @returns {boolean} token 是否有效
  */
@@ -156,25 +165,32 @@ export async function fetchDailyKLines(params: {
   fields.forEach((f, i) => {
     fieldIndex[f] = i;
   });
+  const tradeDateIndex = requireFieldIndex(fieldIndex, 'trade_date');
+  const openIndex = requireFieldIndex(fieldIndex, 'open');
+  const highIndex = requireFieldIndex(fieldIndex, 'high');
+  const lowIndex = requireFieldIndex(fieldIndex, 'low');
+  const closeIndex = requireFieldIndex(fieldIndex, 'close');
+  const volumeIndex = requireFieldIndex(fieldIndex, 'vol');
+  const amountIndex = requireFieldIndex(fieldIndex, 'amount');
 
   // 转换数据格式
   const klines: KLine[] = data.data.items
     .map((item) => {
-      const tradeDate = String(item[fieldIndex.trade_date] ?? '');
+      const tradeDate = String(item[tradeDateIndex] ?? '');
       const timestamp = new Date(
         `${tradeDate.slice(0, 4)}-${tradeDate.slice(4, 6)}-${tradeDate.slice(6, 8)}T15:00:00+08:00`
       ).getTime();
 
       return {
-        symbol: tsCode.replace('.', '_'),
+        symbol: fromTushareCode(tsCode),
         timestamp,
         date: `${tradeDate.slice(0, 4)}-${tradeDate.slice(4, 6)}-${tradeDate.slice(6, 8)}`,
-        open: Number(item[fieldIndex.open] ?? 0),
-        high: Number(item[fieldIndex.high] ?? 0),
-        low: Number(item[fieldIndex.low] ?? 0),
-        close: Number(item[fieldIndex.close] ?? 0),
-        volume: Number(item[fieldIndex.vol] ?? 0),
-        amount: Number(item[fieldIndex.amount] ?? 0),
+        open: Number(item[openIndex] ?? 0),
+        high: Number(item[highIndex] ?? 0),
+        low: Number(item[lowIndex] ?? 0),
+        close: Number(item[closeIndex] ?? 0),
+        volume: Number(item[volumeIndex] ?? 0),
+        amount: Number(item[amountIndex] ?? 0),
       };
     })
     .sort((a, b) => a.timestamp - b.timestamp);
@@ -184,10 +200,26 @@ export async function fetchDailyKLines(params: {
 
   // 获取股票真实名称
   const stockName = await fetchStockName(tsCode);
-  console.log(stockName);
   return {
-    symbol: tsCode,
+    symbol: fromTushareCode(tsCode),
     name: stockName,
     klines: recentKlines,
   };
+}
+
+/**
+ * 读取 Tushare 响应字段索引。
+ * @param {Record<string, number>} fieldIndex 字段索引表
+ * @param {string} fieldName 字段名称
+ * @returns {number} 字段索引
+ */
+function requireFieldIndex(
+  fieldIndex: Record<string, number>,
+  fieldName: string
+): number {
+  const index = fieldIndex[fieldName];
+  if (index === undefined) {
+    throw new Error(`Tushare 返回字段缺失：${fieldName}`);
+  }
+  return index;
 }

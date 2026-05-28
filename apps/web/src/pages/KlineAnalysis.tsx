@@ -135,7 +135,7 @@ export function KlineAnalysis() {
   }
 
   return (
-    <main className="appShell">
+    <main className="kline-page">
       <section className="toolbar">
         <div>
           <h1>A 股 K 线信号识别</h1>

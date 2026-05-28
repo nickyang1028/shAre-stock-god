@@ -1,0 +1,71 @@
+.info-card {
+  grid-column: 1 / -1;
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-default, rgba(148, 163, 184, 0.2));
+  border-radius: 12px;
+  padding: 20px;
+
+  .stock-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+
+    h2 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary, #f1f5f9);
+    }
+
+    .stock-code {
+      padding: 4px 10px;
+      background: var(--bg-tertiary, #1a2234);
+      border: 1px solid var(--border-subtle, rgba(148, 163, 184, 0.1));
+      border-radius: 6px;
+      color: var(--text-secondary, #94a3b8);
+      font-size: 13px;
+      font-weight: 600;
+    }
+  }
+
+  .price-info {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 12px;
+
+    .current-price {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text-primary, #f1f5f9);
+      letter-spacing: -0.02em;
+    }
+
+    .change {
+      font-size: 18px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 6px;
+
+      &.positive {
+        color: var(--bullish, #ef4444);
+        background: rgba(239, 68, 68, 0.15);
+      }
+
+      &.negative {
+        color: var(--bearish, #10b981);
+        background: rgba(16, 185, 129, 0.15);
+      }
+    }
+  }
+
+  .data-source-inline {
+    font-size: 13px;
+    color: var(--text-tertiary, #64748b);
+    display: flex;
+    gap: 16px;
+  }
+}
