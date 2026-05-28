@@ -3,6 +3,9 @@ import { calculateMA, calculateMACD } from "../indicators/indicators.js";
 import {
   detectHammerSignals,
   detectDojiSignals,
+  detectMorningStarEveningStarSignals,
+  detectShootingStarHangingManSignals,
+  detectSupportResistanceSignals,
 } from "./advancedPatterns.js";
 
 type SignalMeta = {
@@ -16,6 +19,14 @@ type SignalMeta = {
   strength: 1 | 2 | 3 | 4 | 5;
   /** 信号说明 */
   description: string;
+  /** 信号可信度评分，0~100 */
+  confidence?: number;
+  /** 信号触发原因 */
+  reasons?: string[];
+  /** 信号计算时的关键数据快照 */
+  metrics?: Signal['metrics'];
+  /** 信号辅助标签 */
+  tags?: string[];
 };
 
 /**
@@ -31,6 +42,9 @@ export function detectSignals(klines: KLine[]): Signal[] {
     ...detectMacdCrossSignals(klines),
     ...detectHammerSignals(klines),
     ...detectDojiSignals(klines),
+    ...detectMorningStarEveningStarSignals(klines),
+    ...detectShootingStarHangingManSignals(klines),
+    ...detectSupportResistanceSignals(klines),
   ].sort((first, second) => first.timestamp - second.timestamp);
 }
 
@@ -56,12 +70,20 @@ function detectEngulfingSignals(klines: KLine[]): Signal[] {
       current.open <= previous.close &&
       current.close >= previous.open
     ) {
+      const reasons = ["前一日为阴线", "当前为阳线", "当前实体完全覆盖前一日实体"];
       signals.push(createSignal(current, {
         type: "bullish_engulfing",
         name: "阳包阴",
         direction: "bullish",
         strength: 3,
         description: "当前阳线实体向上包住前一根阴线实体，属于偏多形态提示。",
+        confidence: calculateConfidence({ strength: 3, reasons }),
+        reasons,
+        metrics: [
+          { label: "前日实体", value: formatPriceRange(previous.open, previous.close) },
+          { label: "当日实体", value: formatPriceRange(current.open, current.close) },
+        ],
+        tags: ["K线形态", "反转提示"],
       }));
     }
 
@@ -72,12 +94,20 @@ function detectEngulfingSignals(klines: KLine[]): Signal[] {
       current.open >= previous.close &&
       current.close <= previous.open
     ) {
+      const reasons = ["前一日为阳线", "当前为阴线", "当前实体完全覆盖前一日实体"];
       signals.push(createSignal(current, {
         type: "bearish_engulfing",
         name: "阴包阳",
         direction: "bearish",
         strength: 3,
         description: "当前阴线实体向下包住前一根阳线实体，属于偏空形态提示。",
+        confidence: calculateConfidence({ strength: 3, reasons }),
+        reasons,
+        metrics: [
+          { label: "前日实体", value: formatPriceRange(previous.open, previous.close) },
+          { label: "当日实体", value: formatPriceRange(current.open, current.close) },
+        ],
+        tags: ["K线形态", "反转提示"],
       }));
     }
   }
@@ -112,12 +142,29 @@ function detectMaCrossSignals(klines: KLine[]): Signal[] {
       previousShort <= previousLong &&
       currentShort > currentLong
     ) {
+      const reasons = [
+        "上一交易日 MA5 未站上 MA10",
+        "当前 MA5 上穿 MA10",
+        current.close >= currentShort ? "收盘价位于 MA5 上方" : "收盘价尚未站上 MA5",
+      ];
       signals.push(createSignal(current, {
         type: "ma_golden_cross",
         name: "均线金叉",
         direction: "bullish",
         strength: 3,
         description: "MA5 从下方向上穿越 MA10，属于短期均线偏多提示。",
+        confidence: calculateConfidence({
+          strength: 3,
+          reasons,
+          confirmations: current.close >= currentShort ? 1 : 0,
+        }),
+        reasons,
+        metrics: [
+          { label: "昨日 MA5/MA10", value: `${formatNumber(previousShort)} / ${formatNumber(previousLong)}` },
+          { label: "当前 MA5/MA10", value: `${formatNumber(currentShort)} / ${formatNumber(currentLong)}` },
+          { label: "收盘价", value: formatNumber(current.close) },
+        ],
+        tags: ["均线", "趋势"],
       }));
     }
 
@@ -130,12 +177,29 @@ function detectMaCrossSignals(klines: KLine[]): Signal[] {
       previousShort >= previousLong &&
       currentShort < currentLong
     ) {
+      const reasons = [
+        "上一交易日 MA5 未跌破 MA10",
+        "当前 MA5 下穿 MA10",
+        current.close <= currentShort ? "收盘价位于 MA5 下方" : "收盘价仍在 MA5 上方",
+      ];
       signals.push(createSignal(current, {
         type: "ma_dead_cross",
         name: "均线死叉",
         direction: "bearish",
         strength: 3,
         description: "MA5 从上方向下穿越 MA10，属于短期均线偏空提示。",
+        confidence: calculateConfidence({
+          strength: 3,
+          reasons,
+          confirmations: current.close <= currentShort ? 1 : 0,
+        }),
+        reasons,
+        metrics: [
+          { label: "昨日 MA5/MA10", value: `${formatNumber(previousShort)} / ${formatNumber(previousLong)}` },
+          { label: "当前 MA5/MA10", value: `${formatNumber(currentShort)} / ${formatNumber(currentLong)}` },
+          { label: "收盘价", value: formatNumber(current.close) },
+        ],
+        tags: ["均线", "趋势"],
       }));
     }
   }
@@ -159,22 +223,58 @@ function detectMacdCrossSignals(klines: KLine[]): Signal[] {
 
     // 复杂条件：在零轴上方/下方发生交叉时，使用不同强度提升可解释性。
     if (previous && current && kline && previous.dif <= previous.dea && current.dif > current.dea) {
+      const aboveZeroAxis = current.dif > 0 && current.dea > 0;
+      const reasons = [
+        "上一交易日 DIF 未站上 DEA",
+        "当前 DIF 上穿 DEA",
+        aboveZeroAxis ? "金叉发生在零轴上方" : "金叉发生在零轴下方",
+      ];
       signals.push(createSignal(kline, {
         type: "macd_golden_cross",
         name: "MACD 金叉",
         direction: "bullish",
-        strength: current.dif > 0 && current.dea > 0 ? 4 : 3,
+        strength: aboveZeroAxis ? 4 : 3,
         description: "DIF 从下方向上穿越 DEA，属于 MACD 偏多提示。",
+        confidence: calculateConfidence({
+          strength: aboveZeroAxis ? 4 : 3,
+          reasons,
+          confirmations: aboveZeroAxis ? 1 : 0,
+        }),
+        reasons,
+        metrics: [
+          { label: "昨日 DIF/DEA", value: `${formatNumber(previous.dif)} / ${formatNumber(previous.dea)}` },
+          { label: "当前 DIF/DEA", value: `${formatNumber(current.dif)} / ${formatNumber(current.dea)}` },
+          { label: "MACD柱", value: formatNumber(current.macd) },
+        ],
+        tags: ["MACD", "动能"],
       }));
     }
 
     if (previous && current && kline && previous.dif >= previous.dea && current.dif < current.dea) {
+      const belowZeroAxis = current.dif < 0 && current.dea < 0;
+      const reasons = [
+        "上一交易日 DIF 未跌破 DEA",
+        "当前 DIF 下穿 DEA",
+        belowZeroAxis ? "死叉发生在零轴下方" : "死叉发生在零轴上方",
+      ];
       signals.push(createSignal(kline, {
         type: "macd_dead_cross",
         name: "MACD 死叉",
         direction: "bearish",
-        strength: current.dif < 0 && current.dea < 0 ? 4 : 3,
+        strength: belowZeroAxis ? 4 : 3,
         description: "DIF 从上方向下穿越 DEA，属于 MACD 偏空提示。",
+        confidence: calculateConfidence({
+          strength: belowZeroAxis ? 4 : 3,
+          reasons,
+          confirmations: belowZeroAxis ? 1 : 0,
+        }),
+        reasons,
+        metrics: [
+          { label: "昨日 DIF/DEA", value: `${formatNumber(previous.dif)} / ${formatNumber(previous.dea)}` },
+          { label: "当前 DIF/DEA", value: `${formatNumber(current.dif)} / ${formatNumber(current.dea)}` },
+          { label: "MACD柱", value: formatNumber(current.macd) },
+        ],
+        tags: ["MACD", "动能"],
       }));
     }
   }
@@ -200,5 +300,51 @@ function createSignal(kline: KLine, meta: SignalMeta): Signal {
     strength: meta.strength,
     description: meta.description,
     price: kline.close,
+    confidence: meta.confidence ?? calculateConfidence({
+      strength: meta.strength,
+      reasons: meta.reasons ?? [meta.description],
+    }),
+    reasons: meta.reasons ?? [meta.description],
+    metrics: meta.metrics ?? [
+      { label: "开盘价", value: formatNumber(kline.open) },
+      { label: "收盘价", value: formatNumber(kline.close) },
+      { label: "最高/最低", value: `${formatNumber(kline.high)} / ${formatNumber(kline.low)}` },
+    ],
+    tags: meta.tags ?? ["技术信号"],
   };
+}
+
+/**
+ * 计算信号可信度评分。
+ * @param {{ strength: 1 | 2 | 3 | 4 | 5; reasons: string[]; confirmations?: number }} params 评分参数
+ * @returns {number} 0~100 的可信度评分
+ */
+function calculateConfidence(params: {
+  strength: 1 | 2 | 3 | 4 | 5;
+  reasons: string[];
+  confirmations?: number;
+}): number {
+  // 关键逻辑：用强度作为基础分，原因数量和额外确认只做保守加分。
+  const reasonScore = Math.min(params.reasons.length * 4, 12);
+  const confirmationScore = (params.confirmations ?? 0) * 8;
+  return Math.min(params.strength * 15 + reasonScore + confirmationScore, 95);
+}
+
+/**
+ * 格式化数值展示。
+ * @param {number} value 原始数值
+ * @returns {string} 两位小数字符串
+ */
+function formatNumber(value: number): string {
+  return value.toFixed(2);
+}
+
+/**
+ * 格式化实体价格区间。
+ * @param {number} open 开盘价
+ * @param {number} close 收盘价
+ * @returns {string} 开收盘价格区间
+ */
+function formatPriceRange(open: number, close: number): string {
+  return `${formatNumber(open)} → ${formatNumber(close)}`;
 }

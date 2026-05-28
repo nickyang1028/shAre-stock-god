@@ -1,17 +1,28 @@
 import type { KLine, Signal, SignalDirection, SignalType } from "@share-stock-god/shared";
+import { calculateMACD } from "../indicators/indicators.js";
 
 type SignalMeta = {
+  /** 信号类型 */
   type: SignalType;
+  /** 信号名称 */
   name: string;
+  /** 信号方向 */
   direction: SignalDirection;
+  /** 信号强度，1~5 */
   strength: 1 | 2 | 3 | 4 | 5;
+  /** 信号说明 */
   description: string;
 };
 
 /**
- * 创建信号对象
+ * 创建信号对象。
+ * @param {KLine} kline 触发信号的 K 线
+ * @param {SignalMeta} meta 信号元信息
+ * @returns {Signal} 标准化后的信号
  */
 function createSignal(kline: KLine, meta: SignalMeta): Signal {
+  const reasons = createDefaultReasons(meta);
+
   return {
     id: `${kline.symbol}-${kline.timestamp}-${meta.type}`,
     symbol: kline.symbol,
@@ -23,7 +34,89 @@ function createSignal(kline: KLine, meta: SignalMeta): Signal {
     strength: meta.strength,
     description: meta.description,
     price: kline.close,
+    confidence: calculateConfidence(meta.strength, reasons),
+    reasons,
+    metrics: [
+      { label: "开盘价", value: formatNumber(kline.open) },
+      { label: "收盘价", value: formatNumber(kline.close) },
+      { label: "最高/最低", value: `${formatNumber(kline.high)} / ${formatNumber(kline.low)}` },
+    ],
+    tags: createDefaultTags(meta.type),
   };
+}
+
+/**
+ * 创建高级形态的默认解释原因。
+ * @param {SignalMeta} meta 信号元信息
+ * @returns {string[]} 信号触发原因
+ */
+function createDefaultReasons(meta: SignalMeta): string[] {
+  // 关键逻辑：高级形态检测函数内部已完成严格条件判断，这里将判断结果转成用户可读解释。
+  return [meta.description, `信号方向：${formatDirection(meta.direction)}`, `基础强度：${meta.strength}/5`];
+}
+
+/**
+ * 创建高级形态的默认标签。
+ * @param {SignalType} type 信号类型
+ * @returns {string[]} 信号标签
+ */
+function createDefaultTags(type: SignalType): string[] {
+  if (type.includes("support") || type.includes("resistance")) {
+    return ["支撑阻力", "位置" ];
+  }
+
+  if (type.includes("divergence")) {
+    return ["背离", "动能" ];
+  }
+
+  return ["K线形态", "高级形态"];
+}
+
+/**
+ * 计算信号可信度评分。
+ * @param {1 | 2 | 3 | 4 | 5} strength 信号强度
+ * @param {string[]} reasons 信号原因
+ * @returns {number} 0~100 的可信度评分
+ */
+function calculateConfidence(strength: 1 | 2 | 3 | 4 | 5, reasons: string[]): number {
+  // 保守评分：高级形态只按强度和解释完整度加分，避免因为接入更多形态导致过度乐观。
+  return Math.min(strength * 15 + Math.min(reasons.length * 4, 12), 90);
+}
+
+/**
+ * 格式化信号方向。
+ * @param {SignalDirection} direction 信号方向
+ * @returns {string} 中文方向
+ */
+function formatDirection(direction: SignalDirection): string {
+  if (direction === "bullish") {
+    return "偏多";
+  }
+
+  if (direction === "bearish") {
+    return "偏空";
+  }
+
+  return "中性";
+}
+
+/**
+ * 格式化数值展示。
+ * @param {number} value 原始数值
+ * @returns {string} 两位小数字符串
+ */
+function formatNumber(value: number): string {
+  return value.toFixed(2);
+}
+
+/**
+ * 安全读取指定位置的 K 线。
+ * @param {KLine[]} klines K 线序列
+ * @param {number} index 目标索引
+ * @returns {KLine | null} K 线或空值
+ */
+function getKLineAt(klines: KLine[], index: number): KLine | null {
+  return klines[index] ?? null;
 }
 
 /**
@@ -74,9 +167,13 @@ export function detectHammerSignals(klines: KLine[]): Signal[] {
   const signals: Signal[] = [];
 
   for (let i = 2; i < klines.length; i++) {
-    const current = klines[i];
-    const prev1 = klines[i - 1];
-    const prev2 = klines[i - 2];
+    const current = getKLineAt(klines, i);
+    const prev1 = getKLineAt(klines, i - 1);
+    const prev2 = getKLineAt(klines, i - 2);
+
+    if (current === null || prev1 === null || prev2 === null) {
+      continue;
+    }
 
 
     // 锤子线条件：
@@ -139,8 +236,12 @@ export function detectDojiSignals(klines: KLine[]): Signal[] {
 
 
   for (let i = 1; i < klines.length; i++) {
-    const current = klines[i];
-    const prev = klines[i - 1];
+    const current = getKLineAt(klines, i);
+    const prev = getKLineAt(klines, i - 1);
+
+    if (current === null || prev === null) {
+      continue;
+    }
 
 
     const bodySize = getBodySize(current);
@@ -219,9 +320,13 @@ export function detectMorningStarEveningStarSignals(klines: KLine[]): Signal[] {
   const signals: Signal[] = [];
 
   for (let i = 2; i < klines.length; i++) {
-    const first = klines[i - 2];
-    const second = klines[i - 1];
-    const third = klines[i];
+    const first = getKLineAt(klines, i - 2);
+    const second = getKLineAt(klines, i - 1);
+    const third = getKLineAt(klines, i);
+
+    if (first === null || second === null || third === null) {
+      continue;
+    }
 
     // 早晨之星：下跌趋势后出现，第一根大阴线，第二根小实体（十字星或陀螺），第三根大阳线
     const isMorningStar =
@@ -272,9 +377,13 @@ export function detectShootingStarHangingManSignals(klines: KLine[]): Signal[] {
   const signals: Signal[] = [];
 
   for (let i = 2; i < klines.length; i++) {
-    const current = klines[i];
-    const prev1 = klines[i - 1];
-    const prev2 = klines[i - 2];
+    const current = getKLineAt(klines, i);
+    const prev1 = getKLineAt(klines, i - 1);
+    const prev2 = getKLineAt(klines, i - 2);
+
+    if (current === null || prev1 === null || prev2 === null) {
+      continue;
+    }
 
     const bodySize = getBodySize(current);
     const upperShadow = getUpperShadow(current);
@@ -333,7 +442,14 @@ function calculateRSI(klines: KLine[], period: number = 14): number[] {
 
   // 计算价格变化
   for (let i = 1; i < klines.length; i++) {
-    const change = klines[i].close - klines[i - 1].close;
+    const current = getKLineAt(klines, i);
+    const previous = getKLineAt(klines, i - 1);
+
+    if (current === null || previous === null) {
+      continue;
+    }
+
+    const change = current.close - previous.close;
     gains.push(change > 0 ? change : 0);
     losses.push(change < 0 ? -change : 0);
   }
@@ -372,21 +488,36 @@ export function detectDivergenceSignals(klines: KLine[]): Signal[] {
 
   // 寻找价格极值点
   for (let i = 5; i < klines.length - 5; i++) {
-    const current = klines[i];
+    const current = getKLineAt(klines, i);
+    const past = getKLineAt(klines, i - 5);
+    const future = getKLineAt(klines, i + 5);
     const prevMacd = macd[i - 1];
     const currentMacd = macd[i];
+    const currentRSI = rsi[i];
+    const prevRSI = rsi[i - 5];
+
+    if (
+      current === null ||
+      past === null ||
+      future === null ||
+      prevMacd === undefined ||
+      currentMacd === undefined ||
+      currentRSI === undefined ||
+      prevRSI === undefined
+    ) {
+      continue;
+    }
 
     // 检测MACD底背离（看涨）
     // 价格创新低，但MACD未创新低
     const isPriceLowerLow =
-      current.low < klines[i - 5].low &&
-      current.low < klines[i + 5].low;
+      current.low < past.low &&
+      current.low < future.low;
 
     const isMacdNotLowerLow =
-      prevMacd &&
-      currentMacd.bar > prevMacd.bar;
+      currentMacd.macd > prevMacd.macd;
 
-    if (isPriceLowerLow && isMacdNotLowerLow && currentMacd.bar < 0) {
+    if (isPriceLowerLow && isMacdNotLowerLow && currentMacd.macd < 0) {
       signals.push(createSignal(current, {
         type: "macd_bullish_divergence",
         name: "MACD底背离",
@@ -399,14 +530,13 @@ export function detectDivergenceSignals(klines: KLine[]): Signal[] {
     // 检测MACD顶背离（看跌）
     // 价格创新高，但MACD未创新高
     const isPriceHigherHigh =
-      current.high > klines[i - 5].high &&
-      current.high > klines[i + 5].high;
+      current.high > past.high &&
+      current.high > future.high;
 
     const isMacdNotHigherHigh =
-      prevMacd &&
-      currentMacd.bar < prevMacd.bar;
+      currentMacd.macd < prevMacd.macd;
 
-    if (isPriceHigherHigh && isMacdNotHigherHigh && currentMacd.bar > 0) {
+    if (isPriceHigherHigh && isMacdNotHigherHigh && currentMacd.macd > 0) {
       signals.push(createSignal(current, {
         type: "macd_bearish_divergence",
         name: "MACD顶背离",
@@ -417,9 +547,6 @@ export function detectDivergenceSignals(klines: KLine[]): Signal[] {
     }
 
     // 检测RSI背离（类似逻辑，使用RSI值）
-    const currentRSI = rsi[i];
-    const prevRSI = rsi[i - 5];
-
     // RSI底背离
     if (
       isPriceLowerLow &&
@@ -461,11 +588,11 @@ function calculateSMA(values: number[], period: number): number[] {
   const sma: number[] = [];
   for (let i = 0; i < values.length; i++) {
     if (i < period - 1) {
-      sma.push(values[i]);
+      sma.push(values[i] ?? 0);
     } else {
       let sum = 0;
       for (let j = 0; j < period; j++) {
-        sum += values[i - j];
+        sum += values[i - j] ?? 0;
       }
       sma.push(sum / period);
     }
@@ -484,14 +611,28 @@ function findExtremes(
   const lows: number[] = [];
 
   for (let i = window; i < klines.length - window; i++) {
+    const current = getKLineAt(klines, i);
     let isHigh = true;
     let isLow = true;
 
+    if (current === null) {
+      continue;
+    }
+
     for (let j = 1; j <= window; j++) {
-      if (klines[i].high <= klines[i - j].high || klines[i].high <= klines[i + j].high) {
+      const previous = getKLineAt(klines, i - j);
+      const next = getKLineAt(klines, i + j);
+
+      if (previous === null || next === null) {
+        isHigh = false;
+        isLow = false;
+        continue;
+      }
+
+      if (current.high <= previous.high || current.high <= next.high) {
         isHigh = false;
       }
-      if (klines[i].low >= klines[i - j].low || klines[i].low >= klines[i + j].low) {
+      if (current.low >= previous.low || current.low >= next.low) {
         isLow = false;
       }
     }
@@ -513,25 +654,38 @@ export function detectSupportResistanceSignals(klines: KLine[]): Signal[] {
 
   // 寻找近期的高点和低点作为支撑阻力位
   const { highs, lows } = findExtremes(klines, 3);
+  const latest = getKLineAt(klines, klines.length - 1);
+
+  if (latest === null) {
+    return signals;
+  }
 
   // 计算支撑阻力位（使用近期极值点的均值）
-  const recentHighs = highs.slice(-3).map(i => klines[i].high);
-  const recentLows = lows.slice(-3).map(i => klines[i].low);
+  const recentHighs = highs
+    .slice(-3)
+    .map((index) => getKLineAt(klines, index)?.high)
+    .filter((value): value is number => value !== undefined);
+  const recentLows = lows
+    .slice(-3)
+    .map((index) => getKLineAt(klines, index)?.low)
+    .filter((value): value is number => value !== undefined);
 
   const resistanceLevel = recentHighs.length > 0
     ? recentHighs.reduce((a, b) => a + b, 0) / recentHighs.length
-    : klines[klines.length - 1].high * 1.02;
+    : latest.high * 1.02;
 
   const supportLevel = recentLows.length > 0
     ? recentLows.reduce((a, b) => a + b, 0) / recentLows.length
-    : klines[klines.length - 1].low * 0.98;
+    : latest.low * 0.98;
 
   // 检测突破信号
   for (let i = 5; i < klines.length; i++) {
-    const current = klines[i];
-    const prev = klines[i - 1];
+    const current = getKLineAt(klines, i);
+    const prev = getKLineAt(klines, i - 1);
 
-    const prev2 = klines[i - 2];
+    if (current === null || prev === null) {
+      continue;
+    }
 
     // 突破阻力位：前一根K线收盘价低于阻力位，当前K线收盘价高于阻力位
     if (

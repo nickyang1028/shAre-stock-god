@@ -72,6 +72,21 @@ export type Signal = {
   description: string;
   /** 信号触发时价格 */
   price: number;
+  /** 信号可信度评分，0~100 */
+  confidence: number;
+  /** 信号触发原因，用于前端解释展示 */
+  reasons: string[];
+  /** 信号计算时的关键数据快照 */
+  metrics: SignalMetric[];
+  /** 信号辅助标签 */
+  tags: string[];
+};
+
+export type SignalMetric = {
+  /** 指标名称 */
+  label: string;
+  /** 指标展示值 */
+  value: string;
 };
 
 export type StockAnalysisResponse = {
