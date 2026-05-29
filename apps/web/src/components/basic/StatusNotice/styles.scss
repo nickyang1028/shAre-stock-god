@@ -1,0 +1,30 @@
+.status-notice {
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 10px 12px;
+
+  &.info {
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.24);
+    color: #93c5fd;
+  }
+
+  &.success {
+    background: rgba(52, 211, 153, 0.12);
+    border: 1px solid rgba(52, 211, 153, 0.24);
+    color: var(--accent-tertiary);
+  }
+
+  &.warning {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.24);
+    color: #fcd34d;
+  }
+
+  &.error {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.24);
+    color: var(--bearish-light);
+  }
+}

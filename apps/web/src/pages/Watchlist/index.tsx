@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { StatusNotice } from '../../components/basic/StatusNotice/index.js';
 import type { FactorData } from '../Quant/types.js';
 import { formatNumber, formatPercent } from '../Quant/utils.js';
 import {
+  addWatchlistStock,
+  clearWatchlist,
   parseSymbolInput,
   readWatchlist,
+  removeWatchlistStock,
   writeWatchlist,
   type WatchlistStock,
 } from './storage.js';
@@ -21,27 +25,113 @@ type WatchlistRow = {
   data: FactorData | null;
 };
 
+type WatchlistFilter = 'all' | 'up' | 'down' | 'signal' | 'inflow' | 'ma_up' | 'focus';
+
+type WatchlistSort =
+  | 'default'
+  | 'focus_desc'
+  | 'change_desc'
+  | 'volume_desc'
+  | 'price_desc'
+  | 'signal_first';
+
+type WatchlistStats = {
+  /** 自选股数量 */
+  total: number;
+  /** 上涨数量 */
+  upCount: number;
+  /** 下跌数量 */
+  downCount: number;
+  /** 有信号数量 */
+  signalCount: number;
+  /** 资金流入数量 */
+  inflowCount: number;
+  /** 高关注数量 */
+  focusCount: number;
+};
+
+type FocusInfo = {
+  /** 关注分 */
+  score: number;
+  /** 关注原因 */
+  reasons: string[];
+};
+
+type WatchlistPageProps = {
+  /** 是否隐藏页面标题 */
+  hideHeader?: boolean;
+};
+
+const WATCHLIST_FILTERS: Array<{ label: string; value: WatchlistFilter }> = [
+  { label: '全部', value: 'all' },
+  { label: '上涨', value: 'up' },
+  { label: '下跌', value: 'down' },
+  { label: '有信号', value: 'signal' },
+  { label: '资金流入', value: 'inflow' },
+  { label: 'MA上行', value: 'ma_up' },
+  { label: '高关注', value: 'focus' },
+];
+
+const WATCHLIST_SORTS: Array<{ label: string; value: WatchlistSort }> = [
+  { label: '默认顺序', value: 'default' },
+  { label: '关注度优先', value: 'focus_desc' },
+  { label: '涨跌幅优先', value: 'change_desc' },
+  { label: '量比优先', value: 'volume_desc' },
+  { label: '最新价优先', value: 'price_desc' },
+  { label: '信号优先', value: 'signal_first' },
+];
+
 /**
  * 自选股看板页面。
  * @returns {JSX.Element} 自选股看板视图
  */
-export function WatchlistPage() {
-  const [stocks, setStocks] = useState<WatchlistStock[]>(() => readWatchlist());
+export function WatchlistPage(props: WatchlistPageProps) {
+  const { hideHeader = false } = props;
+  const [stocks, setStocks] = useState<WatchlistStock[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [rows, setRows] = useState<Record<string, WatchlistRow>>({});
   const [message, setMessage] = useState('');
+  const [lastRefreshTime, setLastRefreshTime] = useState<number | null>(null);
   const [openMenuSymbol, setOpenMenuSymbol] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ left: number; top: number } | null>(null);
+  const [activeFilter, setActiveFilter] = useState<WatchlistFilter>('all');
+  const [activeSort, setActiveSort] = useState<WatchlistSort>('default');
   const hasAutoRefreshedRef = useRef(false);
+  const hasLoadedStocksRef = useRef(false);
 
-  const orderedRows = useMemo(
+  const baseRows = useMemo(
     () => stocks.map((stock) => rows[stock.symbol] ?? createEmptyRow(stock.symbol)),
     [stocks, rows]
   );
 
+  const stats = useMemo(() => createWatchlistStats(baseRows), [baseRows]);
+
+  const orderedRows = useMemo(
+    () => sortRows(filterRows(baseRows, activeFilter), activeSort),
+    [activeFilter, activeSort, baseRows]
+  );
+
   useEffect(() => {
-    writeWatchlist(stocks);
+    void loadWatchlistStocks();
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedStocksRef.current) {
+      return;
+    }
+
+    void writeWatchlist(stocks);
   }, [stocks]);
+
+  /**
+   * 加载本地数据库自选股。
+   * @returns {Promise<void>} 无返回值
+   */
+  async function loadWatchlistStocks(): Promise<void> {
+    const storedStocks = await readWatchlist();
+    hasLoadedStocksRef.current = true;
+    setStocks(storedStocks);
+  }
 
   useEffect(() => {
     /**
@@ -79,26 +169,24 @@ export function WatchlistPage() {
 
   /**
    * 添加用户输入的自选股。
-   * @returns {void} 无返回值
+   * @returns {Promise<void>} 无返回值
    */
-  function handleAddStocks(): void {
+  async function handleAddStocks(): Promise<void> {
     const symbols = parseSymbolInput(inputValue);
     if (symbols.length === 0) {
       setMessage('请输入至少一个股票代码');
       return;
     }
 
-    setStocks((currentStocks) => {
-      const existingSymbols = new Set(currentStocks.map((stock) => stock.symbol));
-      const nextStocks = [...currentStocks];
-      symbols.forEach((symbol) => {
-        if (!existingSymbols.has(symbol)) {
-          nextStocks.push({ symbol });
-          existingSymbols.add(symbol);
-        }
-      });
-      return nextStocks;
-    });
+    const existingSymbols = new Set(stocks.map((stock) => stock.symbol));
+    const newSymbols = symbols.filter((symbol) => !existingSymbols.has(symbol));
+    const nextStocks = [
+      ...stocks,
+      ...newSymbols.map((symbol) => ({ symbol })),
+    ];
+
+    setStocks(nextStocks);
+    await Promise.all(newSymbols.map(addWatchlistStock));
     setInputValue('');
     setMessage(`已添加 ${symbols.length} 个代码，重复代码会自动忽略`);
   }
@@ -106,10 +194,11 @@ export function WatchlistPage() {
   /**
    * 删除一只自选股。
    * @param {string} symbol 股票代码
-   * @returns {void} 无返回值
+   * @returns {Promise<void>} 无返回值
    */
-  function handleRemoveStock(symbol: string): void {
+  async function handleRemoveStock(symbol: string): Promise<void> {
     setStocks((currentStocks) => currentStocks.filter((stock) => stock.symbol !== symbol));
+    await removeWatchlistStock(symbol);
     setRows((currentRows) => {
       const nextRows = { ...currentRows };
       delete nextRows[symbol];
@@ -119,10 +208,11 @@ export function WatchlistPage() {
 
   /**
    * 清空全部自选股。
-   * @returns {void} 无返回值
+   * @returns {Promise<void>} 无返回值
    */
-  function handleClearStocks(): void {
+  async function handleClearStocks(): Promise<void> {
     setStocks([]);
+    await clearWatchlist();
     setRows({});
     setOpenMenuSymbol(null);
     setMessage('已清空自选股');
@@ -156,6 +246,7 @@ export function WatchlistPage() {
   async function handleRefreshAll(): Promise<void> {
     setMessage('');
     await Promise.all(stocks.map((stock) => refreshStock(stock.symbol)));
+    setLastRefreshTime(Date.now());
   }
 
   /**
@@ -206,20 +297,22 @@ export function WatchlistPage() {
 
   return (
     <main className="watchlist-page">
-      <header className="watchlist-header">
-        <div>
-          <h1>自选股看板</h1>
-          <p>手动添加自选股，批量查看价格、趋势、量能、资金流和信号状态。</p>
-        </div>
-        <button
-          type="button"
-          className="watchlist-refresh-btn"
-          disabled={stocks.length === 0}
-          onClick={() => void handleRefreshAll()}
-        >
-          刷新看板
-        </button>
-      </header>
+      {!hideHeader && (
+        <header className="watchlist-header">
+          <div>
+            <h1>自选股看板</h1>
+            <p>手动添加自选股，批量查看价格、趋势、量能、资金流和信号状态。</p>
+          </div>
+          <button
+            type="button"
+            className="watchlist-refresh-btn"
+            disabled={stocks.length === 0}
+            onClick={() => void handleRefreshAll()}
+          >
+            刷新看板
+          </button>
+        </header>
+      )}
 
       <section className="watchlist-editor">
         <textarea
@@ -233,7 +326,65 @@ export function WatchlistPage() {
             清空自选
           </button>
         </div>
-        {message && <div className="watchlist-message">{message}</div>}
+        {message && <StatusNotice tone="success">{message}</StatusNotice>}
+        {lastRefreshTime !== null && (
+          <div className="watchlist-refresh-time">最后刷新：{formatDateTime(lastRefreshTime)}</div>
+        )}
+      </section>
+
+      <section className="watchlist-dashboard">
+        <div className="watchlist-stat-card">
+          <span>自选股</span>
+          <strong>{stats.total}</strong>
+        </div>
+        <div className="watchlist-stat-card up">
+          <span>上涨</span>
+          <strong>{stats.upCount}</strong>
+        </div>
+        <div className="watchlist-stat-card down">
+          <span>下跌</span>
+          <strong>{stats.downCount}</strong>
+        </div>
+        <div className="watchlist-stat-card signal">
+          <span>有信号</span>
+          <strong>{stats.signalCount}</strong>
+        </div>
+        <div className="watchlist-stat-card inflow">
+          <span>资金流入</span>
+          <strong>{stats.inflowCount}</strong>
+        </div>
+        <div className="watchlist-stat-card focus">
+          <span>高关注</span>
+          <strong>{stats.focusCount}</strong>
+        </div>
+      </section>
+
+      <section className="watchlist-toolbar">
+        <div className="watchlist-filter-tabs">
+          {WATCHLIST_FILTERS.map((filter) => (
+            <button
+              type="button"
+              className={activeFilter === filter.value ? 'active' : ''}
+              key={filter.value}
+              onClick={() => setActiveFilter(filter.value)}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+        <label className="watchlist-sort-field">
+          <span>排序</span>
+          <select
+            value={activeSort}
+            onChange={(event) => setActiveSort(event.target.value as WatchlistSort)}
+          >
+            {WATCHLIST_SORTS.map((sort) => (
+              <option key={sort.value} value={sort.value}>
+                {sort.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </section>
 
       <section className="watchlist-table-card">
@@ -249,13 +400,14 @@ export function WatchlistPage() {
                 <th>量比</th>
                 <th>资金流</th>
                 <th>信号</th>
+                <th>关注度</th>
                 <th>操作</th>
               </tr>
             </thead>
             <tbody>
               {orderedRows.length > 0 ? (
                 orderedRows.map((row) => (
-                  <tr key={row.symbol}>
+                  <tr className={getRowClassName(row)} key={row.symbol}>
                     <td>{row.symbol}</td>
                     <td>{row.data?.name ?? '-'}</td>
                     <td>{row.data ? formatNumber(row.data.latestPrice) : '-'}</td>
@@ -266,6 +418,7 @@ export function WatchlistPage() {
                     <td>{row.data ? formatNumber(row.data.volume.volumeRatio) : '-'}</td>
                     <td>{row.data ? formatCapitalFlow(row.data.capitalFlow.signal) : '-'}</td>
                     <td>{row.loading ? '加载中...' : row.error || formatSignals(row.data)}</td>
+                    <td>{formatFocusInfo(row)}</td>
                     <td>
                       <div className="watchlist-row-actions">
                         <div className="watchlist-menu-wrap">
@@ -287,19 +440,19 @@ export function WatchlistPage() {
                             >
                               <Link to={`/kline?symbol=${encodeURIComponent(row.symbol)}`}>K线信号</Link>
                               <Link to={`/quant?symbol=${encodeURIComponent(row.symbol)}`}>因子分析</Link>
-                              <Link to={`/backtest?symbol=${encodeURIComponent(row.symbol)}`}>策略回测</Link>
+                              <Link to={`/strategy?tab=backtest&symbol=${encodeURIComponent(row.symbol)}`}>策略回测</Link>
                             </div>
                           )}
                         </div>
                         <button type="button" onClick={() => void refreshStock(row.symbol)}>刷新</button>
-                        <button type="button" className="danger" onClick={() => handleRemoveStock(row.symbol)}>删除</button>
+                        <button type="button" className="danger" onClick={() => void handleRemoveStock(row.symbol)}>删除</button>
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td className="watchlist-empty" colSpan={9}>暂无自选股，请先添加股票代码</td>
+                  <td className="watchlist-empty" colSpan={10}>暂无自选股，请先添加股票代码</td>
                 </tr>
               )}
             </tbody>
@@ -393,6 +546,257 @@ function getChangeClass(changePercent: number): string {
   }
 
   return '';
+}
+
+/**
+ * 格式化日期时间。
+ * @param {number} timestamp 时间戳
+ * @returns {string} 日期时间文本
+ */
+function formatDateTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/**
+ * 判断行是否存在关注信号。
+ * @param {WatchlistRow} row 自选股行
+ * @returns {boolean} 是否有信号
+ */
+function hasWatchSignal(row: WatchlistRow): boolean {
+  const signals = row.data?.signals;
+  if (signals === undefined) {
+    return false;
+  }
+
+  return signals.maGoldenCross || signals.maDeadCross || signals.volumeBreakout || signals.capitalInflowSignal;
+}
+
+/**
+ * 统计自选股看板摘要。
+ * @param {WatchlistRow[]} rows 自选股行
+ * @returns {WatchlistStats} 看板统计
+ */
+function createWatchlistStats(rows: WatchlistRow[]): WatchlistStats {
+  return rows.reduce<WatchlistStats>(
+    (stats, row) => {
+      const data = row.data;
+      if (data === null) {
+        return stats;
+      }
+
+      return {
+        total: stats.total,
+        upCount: stats.upCount + (data.changePercent > 0 ? 1 : 0),
+        downCount: stats.downCount + (data.changePercent < 0 ? 1 : 0),
+        signalCount: stats.signalCount + (hasWatchSignal(row) ? 1 : 0),
+        inflowCount: stats.inflowCount + (data.capitalFlow.signal === 'inflow' ? 1 : 0),
+        focusCount: stats.focusCount + (calculateFocusInfo(row).score >= 60 ? 1 : 0),
+      };
+    },
+    {
+      total: rows.length,
+      upCount: 0,
+      downCount: 0,
+      signalCount: 0,
+      inflowCount: 0,
+      focusCount: 0,
+    }
+  );
+}
+
+/**
+ * 按条件筛选自选股行。
+ * @param {WatchlistRow[]} rows 自选股行
+ * @param {WatchlistFilter} filter 筛选条件
+ * @returns {WatchlistRow[]} 筛选后的行
+ */
+function filterRows(rows: WatchlistRow[], filter: WatchlistFilter): WatchlistRow[] {
+  if (filter === 'all') {
+    return rows;
+  }
+
+  return rows.filter((row) => {
+    const data = row.data;
+    if (data === null) {
+      return false;
+    }
+
+    if (filter === 'up') {
+      return data.changePercent > 0;
+    }
+
+    if (filter === 'down') {
+      return data.changePercent < 0;
+    }
+
+    if (filter === 'signal') {
+      return hasWatchSignal(row);
+    }
+
+    if (filter === 'inflow') {
+      return data.capitalFlow.signal === 'inflow';
+    }
+
+    if (filter === 'focus') {
+      return calculateFocusInfo(row).score >= 60;
+    }
+
+    return data.ma.trend === 'up';
+  });
+}
+
+/**
+ * 按指定方式排序自选股行。
+ * @param {WatchlistRow[]} rows 自选股行
+ * @param {WatchlistSort} sort 排序方式
+ * @returns {WatchlistRow[]} 排序后的行
+ */
+function sortRows(rows: WatchlistRow[], sort: WatchlistSort): WatchlistRow[] {
+  const nextRows = [...rows];
+
+  if (sort === 'default') {
+    return nextRows;
+  }
+
+  return nextRows.sort((first, second) => {
+    if (sort === 'focus_desc') {
+      return calculateFocusInfo(second).score - calculateFocusInfo(first).score;
+    }
+
+    if (sort === 'signal_first') {
+      return Number(hasWatchSignal(second)) - Number(hasWatchSignal(first));
+    }
+
+    const firstData = first.data;
+    const secondData = second.data;
+    if (firstData === null || secondData === null) {
+      return firstData === null ? 1 : -1;
+    }
+
+    if (sort === 'change_desc') {
+      return secondData.changePercent - firstData.changePercent;
+    }
+
+    if (sort === 'volume_desc') {
+      return secondData.volume.volumeRatio - firstData.volume.volumeRatio;
+    }
+
+    return secondData.latestPrice - firstData.latestPrice;
+  });
+}
+
+/**
+ * 获取表格行样式。
+ * @param {WatchlistRow} row 自选股行
+ * @returns {string} 表格行样式
+ */
+function getRowClassName(row: WatchlistRow): string {
+  const classNames: string[] = [];
+
+  if (hasWatchSignal(row)) {
+    classNames.push('has-signal');
+  }
+
+  if (calculateFocusInfo(row).score >= 60) {
+    classNames.push('high-focus');
+  }
+
+  if (row.loading) {
+    classNames.push('is-loading');
+  }
+
+  if (row.error) {
+    classNames.push('has-error');
+  }
+
+  return classNames.join(' ');
+}
+
+/**
+ * 计算自选股关注度。
+ * @param {WatchlistRow} row 自选股行
+ * @returns {FocusInfo} 关注度信息
+ */
+function calculateFocusInfo(row: WatchlistRow): FocusInfo {
+  const data = row.data;
+  if (data === null) {
+    return { score: 0, reasons: [] };
+  }
+
+  const reasons: string[] = [];
+  let score = 0;
+
+  if (data.ma.trend === 'up') {
+    score += 20;
+    reasons.push('MA上行');
+  }
+
+  if (data.signals.maGoldenCross) {
+    score += 25;
+    reasons.push('均线金叉');
+  }
+
+  if (data.signals.volumeBreakout) {
+    score += 20;
+    reasons.push('放量');
+  }
+
+  if (data.signals.capitalInflowSignal || data.capitalFlow.signal === 'inflow') {
+    score += 20;
+    reasons.push('资金流入');
+  }
+
+  if (data.changePercent > 0) {
+    score += 10;
+    reasons.push('上涨');
+  }
+
+  if (data.volume.volumeRatio >= 1.5) {
+    score += 10;
+    reasons.push('量比偏高');
+  }
+
+  if (data.signals.maDeadCross) {
+    score -= 20;
+    reasons.push('均线死叉扣分');
+  }
+
+  if (data.changePercent < -0.03) {
+    score -= 10;
+    reasons.push('跌幅较大扣分');
+  }
+
+  return {
+    score: Math.max(Math.min(score, 100), 0),
+    reasons,
+  };
+}
+
+/**
+ * 格式化关注度展示。
+ * @param {WatchlistRow} row 自选股行
+ * @returns {string} 关注度文案
+ */
+function formatFocusInfo(row: WatchlistRow): string {
+  if (row.loading) {
+    return '加载中...';
+  }
+
+  if (row.error) {
+    return '-';
+  }
+
+  const focusInfo = calculateFocusInfo(row);
+  if (focusInfo.reasons.length === 0) {
+    return `${focusInfo.score}分 / 暂无明显原因`;
+  }
+
+  return `${focusInfo.score}分 / ${focusInfo.reasons.slice(0, 3).join('、')}`;
 }
 
 export default WatchlistPage;

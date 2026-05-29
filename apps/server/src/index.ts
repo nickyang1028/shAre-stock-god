@@ -5,6 +5,7 @@ import {
   handleBacktest,
   handleBacktestCompare,
   handleBacktestScan,
+  handleBacktestStability,
 } from "./modules/backtest/backtestRoutes.js";
 import {
   handleBatchQuantAnalysis,
@@ -70,5 +71,6 @@ app.post("/api/quant/batch", handleBatchQuantAnalysis);
 app.post("/api/backtest/:symbol", handleBacktest);
 app.post("/api/backtest/:symbol/scan", handleBacktestScan);
 app.post("/api/backtest/:symbol/compare", handleBacktestCompare);
+app.post("/api/backtest/:symbol/stability", handleBacktestStability);
 
 startServer();

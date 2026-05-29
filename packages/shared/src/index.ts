@@ -333,3 +333,70 @@ export type BacktestStrategyCompareResult = {
   /** 策略对比结果 */
   items: BacktestStrategyCompareItem[];
 };
+
+export type BacktestStabilityWindow = {
+  /** 窗口编号 */
+  id: string;
+  /** 窗口开始日期 */
+  startDate: string;
+  /** 窗口结束日期 */
+  endDate: string;
+  /** 总收益率，小数形式 */
+  totalReturn: number;
+  /** 年化收益率，小数形式 */
+  annualizedReturn: number;
+  /** 最大回撤，小数形式 */
+  maxDrawdown: number;
+  /** 胜率，小数形式 */
+  winRate: number;
+  /** 交易次数 */
+  tradeCount: number;
+  /** 超额收益率，小数形式 */
+  excessReturn: number;
+  /** 盈亏比 */
+  profitLossRatio: number;
+};
+
+export type BacktestStabilitySummary = {
+  /** 滚动窗口数量 */
+  windowCount: number;
+  /** 正收益窗口数量 */
+  positiveWindowCount: number;
+  /** 正收益窗口占比，小数形式 */
+  positiveWindowRate: number;
+  /** 平均总收益率，小数形式 */
+  averageReturn: number;
+  /** 收益率标准差，小数形式 */
+  returnStdDev: number;
+  /** 最好窗口收益率，小数形式 */
+  bestReturn: number;
+  /** 最差窗口收益率，小数形式 */
+  worstReturn: number;
+  /** 平均最大回撤，小数形式 */
+  averageMaxDrawdown: number;
+  /** 平均胜率，小数形式 */
+  averageWinRate: number;
+  /** 平均交易次数 */
+  averageTradeCount: number;
+  /** 稳定性评分，0~100 */
+  stabilityScore: number;
+};
+
+export type BacktestStabilityResult = {
+  /** 股票代码 */
+  symbol: string;
+  /** 股票名称 */
+  name: string;
+  /** 数据来源 */
+  source: string;
+  /** 回测策略配置 */
+  strategy: BacktestStrategyConfig;
+  /** 单个滚动窗口 K 线数量 */
+  windowSize: number;
+  /** 滚动步长 K 线数量 */
+  stepSize: number;
+  /** 稳定性摘要 */
+  summary: BacktestStabilitySummary;
+  /** 滚动窗口明细 */
+  windows: BacktestStabilityWindow[];
+};

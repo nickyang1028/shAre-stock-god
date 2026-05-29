@@ -1,0 +1,75 @@
+.boards-page {
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.boards-header {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin: 0 auto 18px;
+  max-width: 1280px;
+
+  h1 {
+    color: var(--text-primary);
+    font-size: 28px;
+    margin: 0 0 8px;
+  }
+
+  p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin: 0;
+  }
+}
+
+.boards-tabs {
+  background: rgba(15, 23, 42, 0.62);
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+}
+
+.boards-tabs button {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 16px;
+
+  &.active {
+    background: rgba(52, 211, 153, 0.14);
+    color: var(--accent-tertiary);
+  }
+}
+
+.boards-content .watchlist-page,
+.boards-content .holdings-page {
+  min-height: 0;
+  padding: 0;
+}
+
+@media (max-width: 860px) {
+  .boards-page {
+    padding: 16px;
+  }
+
+  .boards-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .boards-tabs {
+    width: 100%;
+  }
+
+  .boards-tabs button {
+    flex: 1;
+  }
+}

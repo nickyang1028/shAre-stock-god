@@ -12,6 +12,11 @@ type NavigationItem = {
 
 const NAVIGATION_ITEMS: NavigationItem[] = [
   {
+    path: '/daily-center',
+    mark: 'D',
+    label: '今日中心',
+  },
+  {
     path: '/kline',
     mark: 'K',
     label: 'K线信号',
@@ -22,14 +27,24 @@ const NAVIGATION_ITEMS: NavigationItem[] = [
     label: '因子分析',
   },
   {
-    path: '/watchlist',
+    path: '/boards',
     mark: 'W',
-    label: '自选看板',
+    label: '股票看板',
   },
   {
-    path: '/backtest',
+    path: '/signal-stats',
+    mark: 'S',
+    label: '信号统计',
+  },
+  {
+    path: '/strategy',
     mark: 'B',
-    label: '策略回测',
+    label: '策略分析',
+  },
+  {
+    path: '/daily-report',
+    mark: 'R',
+    label: '每日复盘',
   },
 ];
 

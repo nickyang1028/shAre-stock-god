@@ -3,6 +3,9 @@ import type {
   BacktestConfig,
   BacktestScanItem,
   BacktestScanResult,
+  BacktestStabilityResult,
+  BacktestStabilitySummary,
+  BacktestStabilityWindow,
   BacktestStrategyCompareItem,
   BacktestStrategyCompareResult,
   BacktestStrategyConfig,
@@ -215,6 +218,34 @@ function parseBacktestRequest(body: unknown): {
 }
 
 /**
+ * 解析稳定性分析请求。
+ * @param {unknown} body 请求体
+ * @returns {{ config: BacktestConfig; limit: number; windowSize: number; stepSize: number }} 稳定性配置
+ */
+function parseStabilityRequest(body: unknown): {
+  config: BacktestConfig;
+  limit: number;
+  windowSize: number;
+  stepSize: number;
+} {
+  const parsedRequest = parseBacktestRequest(body);
+  const requestBody =
+    typeof body === 'object' && body !== null
+      ? (body as Record<string, unknown>)
+      : {};
+
+  const windowSize = parseIntegerParam(requestBody.windowSize, 120, 60, 500);
+  const stepSize = parseIntegerParam(requestBody.stepSize, 30, 10, 240);
+
+  return {
+    config: parsedRequest.config,
+    limit: Math.max(parsedRequest.limit, windowSize + stepSize),
+    windowSize,
+    stepSize,
+  };
+}
+
+/**
  * 基于当前配置生成 MA 参数扫描配置。
  * @param {BacktestConfig} baseConfig 基础回测配置
  * @returns {BacktestConfig[]} 扫描配置列表
@@ -322,6 +353,121 @@ function createStrategyCompareItem(
   return {
     ...createScanItem(result),
     strategyName,
+  };
+}
+
+/**
+ * 创建滚动窗口稳定性明细。
+ * @param {ReturnType<typeof runBacktest>} result 回测结果
+ * @param {number} index 窗口索引
+ * @returns {BacktestStabilityWindow} 稳定性窗口明细
+ */
+function createStabilityWindow(
+  result: ReturnType<typeof runBacktest>,
+  index: number
+): BacktestStabilityWindow {
+  const firstPoint = result.equityCurve[0];
+  const lastPoint = result.equityCurve[result.equityCurve.length - 1];
+
+  return {
+    id: `window-${index + 1}`,
+    startDate: firstPoint?.date ?? '',
+    endDate: lastPoint?.date ?? '',
+    totalReturn: result.metrics.totalReturn,
+    annualizedReturn: result.metrics.annualizedReturn,
+    maxDrawdown: result.metrics.maxDrawdown,
+    winRate: result.metrics.winRate,
+    tradeCount: result.metrics.tradeCount,
+    excessReturn: result.metrics.excessReturn,
+    profitLossRatio: result.metrics.profitLossRatio,
+  };
+}
+
+/**
+ * 计算数值平均值。
+ * @param {number[]} values 数值列表
+ * @returns {number} 平均值
+ */
+function average(values: number[]): number {
+  if (values.length === 0) {
+    return 0;
+  }
+
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+/**
+ * 计算数值标准差。
+ * @param {number[]} values 数值列表
+ * @returns {number} 标准差
+ */
+function standardDeviation(values: number[]): number {
+  if (values.length === 0) {
+    return 0;
+  }
+
+  const mean = average(values);
+  const variance = average(values.map((value) => (value - mean) ** 2));
+  return Math.sqrt(variance);
+}
+
+/**
+ * 计算稳定性评分。
+ * @param {number} positiveWindowRate 正收益窗口占比
+ * @param {number} averageReturn 平均收益率
+ * @param {number} returnStdDev 收益率标准差
+ * @param {number} averageMaxDrawdown 平均最大回撤
+ * @returns {number} 0~100 分稳定性评分
+ */
+function calculateStabilityScore(
+  positiveWindowRate: number,
+  averageReturn: number,
+  returnStdDev: number,
+  averageMaxDrawdown: number
+): number {
+  const consistencyScore = positiveWindowRate * 45;
+  const returnScore = Math.max(Math.min(averageReturn, 0.3), -0.3) / 0.3 * 25;
+  const volatilityPenalty = Math.min(returnStdDev / 0.25, 1) * 20;
+  const drawdownPenalty = Math.min(averageMaxDrawdown / 0.3, 1) * 20;
+  const rawScore = 50 + consistencyScore + returnScore - volatilityPenalty - drawdownPenalty;
+
+  return Math.round(Math.min(Math.max(rawScore, 0), 100));
+}
+
+/**
+ * 创建稳定性摘要。
+ * @param {BacktestStabilityWindow[]} windows 滚动窗口明细
+ * @returns {BacktestStabilitySummary} 稳定性摘要
+ */
+function createStabilitySummary(
+  windows: BacktestStabilityWindow[]
+): BacktestStabilitySummary {
+  const returns = windows.map((window) => window.totalReturn);
+  const drawdowns = windows.map((window) => window.maxDrawdown);
+  const winRates = windows.map((window) => window.winRate);
+  const tradeCounts = windows.map((window) => window.tradeCount);
+  const positiveWindowCount = returns.filter((value) => value > 0).length;
+  const averageReturn = average(returns);
+  const returnStdDev = standardDeviation(returns);
+  const averageMaxDrawdown = average(drawdowns);
+
+  return {
+    windowCount: windows.length,
+    positiveWindowCount,
+    positiveWindowRate: windows.length > 0 ? positiveWindowCount / windows.length : 0,
+    averageReturn,
+    returnStdDev,
+    bestReturn: returns.length > 0 ? Math.max(...returns) : 0,
+    worstReturn: returns.length > 0 ? Math.min(...returns) : 0,
+    averageMaxDrawdown,
+    averageWinRate: average(winRates),
+    averageTradeCount: average(tradeCounts),
+    stabilityScore: calculateStabilityScore(
+      windows.length > 0 ? positiveWindowCount / windows.length : 0,
+      averageReturn,
+      returnStdDev,
+      averageMaxDrawdown
+    ),
   };
 }
 
@@ -477,6 +623,72 @@ export async function handleBacktestCompare(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : '策略对比失败';
     console.error(`[BacktestCompare] ${symbol} 策略对比失败:`, message);
+    response.status(500).json({
+      success: false,
+      message,
+    });
+  }
+}
+
+/**
+ * 处理策略历史稳定性分析请求。
+ * POST /api/backtest/:symbol/stability
+ * @param {Request} request Express 请求对象
+ * @param {Response} response Express 响应对象
+ * @returns {Promise<void>} 无返回值
+ */
+export async function handleBacktestStability(
+  request: Request,
+  response: Response
+): Promise<void> {
+  const symbolParam = request.params.symbol;
+  const symbol = typeof symbolParam === 'string' ? symbolParam : '';
+
+  if (!symbol) {
+    response.status(400).json({ message: '股票代码不能为空' });
+    return;
+  }
+
+  try {
+    const { config, limit, windowSize, stepSize } = parseStabilityRequest(request.body);
+    const marketData = await fetchMarketData(symbol, limit);
+    const klines = marketData.klines.slice(-limit);
+    const windows: BacktestStabilityWindow[] = [];
+
+    for (let startIndex = 0; startIndex + windowSize <= klines.length; startIndex += stepSize) {
+      const windowKlines = klines.slice(startIndex, startIndex + windowSize);
+      const result = runBacktest({
+        symbol: marketData.symbol,
+        name: marketData.name,
+        source: marketData.source,
+        klines: windowKlines,
+        config,
+      });
+      windows.push(createStabilityWindow(result, windows.length));
+    }
+
+    if (windows.length === 0) {
+      throw new Error('历史数据不足，无法生成滚动窗口');
+    }
+
+    const result: BacktestStabilityResult = {
+      symbol: marketData.symbol,
+      name: marketData.name,
+      source: marketData.source,
+      strategy: config.strategy,
+      windowSize,
+      stepSize,
+      summary: createStabilitySummary(windows),
+      windows,
+    };
+
+    response.json({
+      success: true,
+      data: result,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : '稳定性分析失败';
+    console.error(`[BacktestStability] ${symbol} 稳定性分析失败:`, message);
     response.status(500).json({
       success: false,
       message,

@@ -1,0 +1,235 @@
+.daily-report-page {
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.daily-report-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin: 0 auto 20px;
+  max-width: 1280px;
+
+  h1 {
+    color: var(--text-primary);
+    font-size: 28px;
+    margin: 0 0 8px;
+  }
+
+  p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin: 0;
+  }
+}
+
+.daily-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.daily-report-actions button {
+  background: var(--accent-primary);
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 14px;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  &.secondary {
+    background: rgba(148, 163, 184, 0.14);
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
+  }
+}
+
+.daily-report-message {
+  color: var(--accent-tertiary);
+  font-size: 13px;
+  margin: 0 auto 18px;
+  max-width: 1280px;
+}
+
+.daily-report-dashboard {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin: 0 auto 18px;
+  max-width: 1280px;
+}
+
+.daily-report-stat-card,
+.daily-report-card {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+}
+
+.daily-report-stat-card {
+  padding: 14px;
+
+  span {
+    color: var(--text-secondary);
+    display: block;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 20px;
+  }
+
+  &.up strong {
+    color: var(--bullish-light);
+  }
+
+  &.down strong {
+    color: var(--bearish-light);
+  }
+
+  &.signal strong {
+    color: var(--accent-tertiary);
+  }
+}
+
+.daily-report-card {
+  margin: 0 auto 18px;
+  max-width: 1280px;
+  padding: 18px;
+}
+
+.daily-report-section-title {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+
+  h2 {
+    color: var(--text-primary);
+    font-size: 18px;
+    margin: 0;
+  }
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 13px;
+  }
+}
+
+.daily-report-table-wrap {
+  overflow-x: auto;
+}
+
+.daily-report-table {
+  border-collapse: collapse;
+  min-width: 980px;
+  width: 100%;
+
+  th,
+  td {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding: 11px 12px;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  th {
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  strong {
+    color: var(--text-primary);
+    display: block;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 12px;
+  }
+}
+
+.daily-report-empty {
+  color: var(--text-tertiary) !important;
+  padding: 28px !important;
+  text-align: center !important;
+}
+
+.daily-report-preview {
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+  max-height: 420px;
+  overflow: auto;
+  padding: 14px;
+  white-space: pre-wrap;
+}
+
+.daily-report-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.daily-report-history button {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 6px 10px;
+
+  &:hover {
+    background: rgba(52, 211, 153, 0.12);
+    color: var(--accent-tertiary);
+  }
+}
+
+.daily-report-up {
+  color: var(--bullish-light) !important;
+}
+
+.daily-report-down {
+  color: var(--bearish-light) !important;
+}
+
+@media (max-width: 860px) {
+  .daily-report-page {
+    padding: 16px;
+  }
+
+  .daily-report-header,
+  .daily-report-section-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .daily-report-actions {
+    width: 100%;
+  }
+
+  .daily-report-actions button {
+    flex: 1;
+  }
+}
