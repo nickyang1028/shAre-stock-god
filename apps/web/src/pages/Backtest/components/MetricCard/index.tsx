@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react';
+
 type MetricCardProps = {
   /** 指标名称 */
-  label: string;
+  label: ReactNode;
   /** 指标值 */
   value: string;
 };
@@ -13,7 +15,7 @@ type MetricCardProps = {
 export function MetricCard(props: MetricCardProps) {
   return (
     <div className="metric-card">
-      <span>{props.label}</span>
+      <span className="metric-label">{props.label}</span>
       <strong>{props.value}</strong>
     </div>
   );

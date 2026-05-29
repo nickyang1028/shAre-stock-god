@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { BacktestPanel } from './components/BacktestPanel/index.js';
 import './styles.scss';
 
@@ -7,7 +8,8 @@ import './styles.scss';
  * @returns {JSX.Element} 策略回测页面
  */
 export function BacktestPage() {
-  const [symbol, setSymbol] = useState('600519');
+  const [searchParams] = useSearchParams();
+  const [symbol, setSymbol] = useState(searchParams.get('symbol') ?? '600519');
 
   return (
     <main className="backtest-page">

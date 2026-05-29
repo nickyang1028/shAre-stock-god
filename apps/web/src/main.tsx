@@ -5,6 +5,7 @@ import { AppLayout } from './components/layout/AppLayout.js';
 import { KlineAnalysis } from './pages/KlineAnalysis.js';
 import { BacktestPage } from './pages/Backtest/index.js';
 import { QuantPage } from './pages/Quant';
+import { WatchlistPage } from './pages/Watchlist/index.js';
 
 const rootElement = document.getElementById('root');
 
@@ -20,6 +21,7 @@ createRoot(rootElement).render(
           <Route path="/" element={<Navigate to="/kline" replace />} />
           <Route path="/kline" element={<KlineAnalysis />} />
           <Route path="/quant" element={<QuantPage />} />
+          <Route path="/watchlist" element={<WatchlistPage />} />
           <Route path="/backtest" element={<BacktestPage />} />
           <Route path="*" element={<Navigate to="/kline" replace />} />
         </Route>

@@ -1,7 +1,11 @@
 import cors from "cors";
 import express, { type Request, type Response } from "express";
 import { getStockAnalysis } from "./modules/analysis/getStockAnalysis.js";
-import { handleBacktest } from "./modules/backtest/backtestRoutes.js";
+import {
+  handleBacktest,
+  handleBacktestCompare,
+  handleBacktestScan,
+} from "./modules/backtest/backtestRoutes.js";
 import {
   handleBatchQuantAnalysis,
   handleQuantAnalysis,
@@ -64,5 +68,7 @@ app.post("/api/quant/batch", handleBatchQuantAnalysis);
 
 // 策略回测路由
 app.post("/api/backtest/:symbol", handleBacktest);
+app.post("/api/backtest/:symbol/scan", handleBacktestScan);
+app.post("/api/backtest/:symbol/compare", handleBacktestCompare);
 
 startServer();

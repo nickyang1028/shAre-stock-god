@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react';
+
 type NumberFieldProps = {
   /** 标签文本 */
-  label: string;
+  label: ReactNode;
   /** 当前数值 */
   value: number;
   /** 最小值 */

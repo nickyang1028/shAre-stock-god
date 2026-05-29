@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { StockAnalysisResponse } from '@share-stock-god/shared';
 import { KLineChartPanel } from '../components/biz/KLineChartPanel.js';
 import { SignalList } from '../components/biz/SignalList.js';
@@ -19,7 +20,9 @@ const DEFAULT_SYMBOL = '600519';
  * @returns {JSX.Element} 页面主视图
  */
 export function KlineAnalysis() {
-  const [symbol, setSymbol] = useState(DEFAULT_SYMBOL);
+  const [searchParams] = useSearchParams();
+  const initialSymbol = searchParams.get('symbol') ?? DEFAULT_SYMBOL;
+  const [symbol, setSymbol] = useState(initialSymbol);
   const [analysis, setAnalysis] = useState<StockAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');

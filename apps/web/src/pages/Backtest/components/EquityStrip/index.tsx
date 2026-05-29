@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import type { BacktestResult } from '@share-stock-god/shared';
-import { formatMoney } from '../../../../utils/format.js';
 
 type EquityStripProps = {
   /** 回测结果 */
@@ -31,7 +30,6 @@ export function EquityStrip({ result }: EquityStripProps) {
           key={point.date}
           className="equity-bar"
           style={{ height: `${point.height}%` }}
-          title={`${point.date}: ${formatMoney(point.equity)}`}
         />
       ))}
     </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { FactorData } from './types.js';
 import { StockInfoCard } from './components/StockInfoCard/index.js';
 import { MAIndicator } from './components/MAIndicator/index.js';
@@ -12,7 +13,8 @@ import './styles.scss';
  * @returns {JSX.Element} 量化分析页面
  */
 export function QuantPage() {
-  const [symbol, setSymbol] = useState('600519');
+  const [searchParams] = useSearchParams();
+  const [symbol, setSymbol] = useState(searchParams.get('symbol') ?? '600519');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [factorData, setFactorData] = useState<FactorData | null>(null);

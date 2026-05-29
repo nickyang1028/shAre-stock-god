@@ -22,6 +22,11 @@ const NAVIGATION_ITEMS: NavigationItem[] = [
     label: '因子分析',
   },
   {
+    path: '/watchlist',
+    mark: 'W',
+    label: '自选看板',
+  },
+  {
     path: '/backtest',
     mark: 'B',
     label: '策略回测',

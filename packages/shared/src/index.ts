@@ -108,20 +108,62 @@ export type StockAnalysisResponse = {
   adjustment: "qfq";
 };
 
-export type BacktestStrategyType = "ma_cross";
+export type BacktestStrategyType =
+  | "ma_cross"
+  | "macd_cross"
+  | "ma_trend_pullback"
+  | "breakout";
 
 export type BacktestExecutionPrice = "next_open";
 
 export type BacktestSide = "buy" | "sell";
 
-export type BacktestStrategyConfig = {
+export type BacktestBaseStrategyConfig = {
   /** 策略类型 */
   type: BacktestStrategyType;
+};
+
+export type MaCrossStrategyConfig = BacktestBaseStrategyConfig & {
+  /** 策略类型 */
+  type: "ma_cross";
   /** 短周期均线参数 */
   shortPeriod: number;
   /** 长周期均线参数 */
   longPeriod: number;
 };
+
+export type MacdCrossStrategyConfig = BacktestBaseStrategyConfig & {
+  /** 策略类型 */
+  type: "macd_cross";
+  /** 是否只在零轴上方买入、零轴下方卖出 */
+  zeroAxisFilter: boolean;
+};
+
+export type MaTrendPullbackStrategyConfig = BacktestBaseStrategyConfig & {
+  /** 策略类型 */
+  type: "ma_trend_pullback";
+  /** 短周期均线参数 */
+  shortPeriod: number;
+  /** 趋势均线参数 */
+  trendPeriod: number;
+  /** 回踩容忍比例，小数形式 */
+  pullbackTolerance: number;
+};
+
+export type BreakoutStrategyConfig = BacktestBaseStrategyConfig & {
+  /** 策略类型 */
+  type: "breakout";
+  /** 突破回看周期 */
+  breakoutPeriod: number;
+  /** 跌破退出回看周期 */
+  exitPeriod: number;
+};
+
+export type BacktestStrategyConfig =
+  | MaCrossStrategyConfig
+  | MacdCrossStrategyConfig
+  | MaTrendPullbackStrategyConfig
+  | BreakoutStrategyConfig;
 
 export type BacktestConfig = {
   /** 初始资金 */
@@ -132,6 +174,12 @@ export type BacktestConfig = {
   stampTaxRate: number;
   /** 滑点率，小数形式 */
   slippageRate: number;
+  /** 单次买入资金占可用现金比例，小数形式 */
+  positionRatio: number;
+  /** 止损比例，小数形式，0 表示不启用 */
+  stopLossRate: number;
+  /** 止盈比例，小数形式，0 表示不启用 */
+  takeProfitRate: number;
   /** A 股整手股数 */
   lotSize: number;
   /** 成交价口径 */
@@ -165,6 +213,12 @@ export type BacktestTrade = {
   cashAfterTrade: number;
   /** 交易后持仓股数 */
   positionAfterTrade: number;
+  /** 单笔平仓收益，买入时为 0 */
+  profit: number;
+  /** 单笔平仓收益率，买入时为 0 */
+  profitRate: number;
+  /** 平仓持仓天数，买入时为 0 */
+  holdingDays: number;
 };
 
 export type BacktestEquityPoint = {
@@ -199,6 +253,20 @@ export type BacktestMetrics = {
   lossCount: number;
   /** 胜率，小数形式 */
   winRate: number;
+  /** 平仓交易平均收益 */
+  averageProfit: number;
+  /** 平仓交易平均收益率，小数形式 */
+  averageProfitRate: number;
+  /** 盈亏比 */
+  profitLossRatio: number;
+  /** 平均持仓天数 */
+  averageHoldingDays: number;
+  /** 最大连续亏损次数 */
+  maxConsecutiveLosses: number;
+  /** 买入并持有基准收益率，小数形式 */
+  benchmarkReturn: number;
+  /** 相对买入并持有的超额收益率，小数形式 */
+  excessReturn: number;
 };
 
 export type BacktestResult = {
@@ -216,4 +284,52 @@ export type BacktestResult = {
   trades: BacktestTrade[];
   /** 权益曲线 */
   equityCurve: BacktestEquityPoint[];
+};
+
+export type BacktestScanItem = {
+  /** 扫描项编号 */
+  id: string;
+  /** 策略配置 */
+  strategy: BacktestStrategyConfig;
+  /** 总收益率，小数形式 */
+  totalReturn: number;
+  /** 年化收益率，小数形式 */
+  annualizedReturn: number;
+  /** 最大回撤，小数形式 */
+  maxDrawdown: number;
+  /** 胜率，小数形式 */
+  winRate: number;
+  /** 交易次数 */
+  tradeCount: number;
+  /** 超额收益率，小数形式 */
+  excessReturn: number;
+  /** 盈亏比 */
+  profitLossRatio: number;
+};
+
+export type BacktestScanResult = {
+  /** 股票代码 */
+  symbol: string;
+  /** 股票名称 */
+  name: string;
+  /** 数据来源 */
+  source: string;
+  /** 扫描结果 */
+  items: BacktestScanItem[];
+};
+
+export type BacktestStrategyCompareItem = BacktestScanItem & {
+  /** 策略名称 */
+  strategyName: string;
+};
+
+export type BacktestStrategyCompareResult = {
+  /** 股票代码 */
+  symbol: string;
+  /** 股票名称 */
+  name: string;
+  /** 数据来源 */
+  source: string;
+  /** 策略对比结果 */
+  items: BacktestStrategyCompareItem[];
 };
